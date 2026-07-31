@@ -2,7 +2,7 @@ import fs from 'fs';
 import { join } from 'path';
 import { dbInit, getPlayer, createPlayer, createMonster, getPlayerParty, getEncyclopedia, getInventory, updateInventoryItem, db } from './database.js';
 import { generateRandomWildMonster, calculateCaptureChance, calculateMonsterStats } from './utils/helpers.js';
-import { generateEncounterCard, generateProfileCard, generateMonsterDetailCard } from './utils/canvasGenerator.js';
+import { generateEncounterCard, generateProfileCard, generateMonsterDetailCard, generateBattleCard } from './utils/canvasGenerator.js';
 import { MONSTERS } from './config.js';
 
 console.log('🧪 Starting Pachimon Battle Game Engine Tests...');
@@ -113,6 +113,12 @@ async function runTests() {
     const zukanBuffer = await generateMonsterDetailCard(MONSTERS[3], starter, 'PROTECTED');
     fs.writeFileSync('test_zukan.png', zukanBuffer);
     console.log('✅ Saved test_zukan.png');
+
+    // Battle Card
+    console.log(' - Rendering Interactive Battle card...');
+    const battleBuffer = await generateBattleCard(starter, wild, starter.hp, wild.hp - 10, 'POISON', 'NONE', 'FOREST', 'Sunny');
+    fs.writeFileSync('test_battle.png', battleBuffer);
+    console.log('✅ Saved test_battle.png');
 
     console.log('\n🎉 ALL TESTS PASSED SUCCESSFULLY! Game engine is robust.');
   } catch (error) {

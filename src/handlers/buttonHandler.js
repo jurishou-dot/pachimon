@@ -11,10 +11,10 @@ import {
   getRankName, generateDailyMissionsBlueprint 
 } from '../utils/helpers.js';
 import { 
-  generateProfileCard, generateEncounterCard, generateMonsterDetailCard 
+  generateProfileCard, generateEncounterCard, generateMonsterDetailCard, generateBattleCard
 } from '../utils/canvasGenerator.js';
 import { db } from '../database.js';
-import { activeTrades, activePvPs } from '../utils/sessionManager.js';
+import { activeTrades, activePvPs, activeBattles } from '../utils/sessionManager.js';
 
 export async function handleButton(interaction) {
   const userId = interaction.user.id;
@@ -1111,148 +1111,359 @@ export async function handleButton(interaction) {
 
     if (!myMonster) return interaction.editReply({ content: 'パチモンが見つかりません。' });
 
-    // Simulate Turn-Based Battle!
-    let myHP = myMonster.hp;
-    let wildHP = wildMonster.hp;
-    const combatLogs = [];
-
-    combatLogs.push(`⚔ **模擬戦闘開始！**`);
-    combatLogs.push(`・味方: **${myMonster.nickname}** (Lv.${myMonster.level} / HP: ${myHP})`);
-    combatLogs.push(`・相手: **${wildMonster.name}** (Lv.${wildMonster.level} / HP: ${wildHP})\n`);
-
-    // Speed determines who attacks first
-    let round = 1;
-    let winner = null;
-
-    while (myHP > 0 && wildHP > 0 && round <= 5) {
-      combatLogs.push(`**[ターン ${round}]**`);
-      
-      const speedCheck = myMonster.speed >= wildMonster.speed;
-      const first = speedCheck ? { name: myMonster.nickname, atk: myMonster.attack, def: wildMonster.defense, isPlayer: true } : { name: wildMonster.name, atk: wildMonster.attack, def: myMonster.defense, isPlayer: false };
-      const second = speedCheck ? { name: wildMonster.name, atk: wildMonster.attack, def: myMonster.defense, isPlayer: false } : { name: myMonster.nickname, atk: myMonster.attack, def: wildMonster.defense, isPlayer: true };
-
-      // First attacks second
-      let damage1 = Math.max(2, Math.floor(first.atk * 0.4 - second.def * 0.15) + Math.floor(Math.random() * 3));
-      if (first.isPlayer) {
-        wildHP = Math.max(0, wildHP - damage1);
-        combatLogs.push(`💥 **${first.name}** の体当たり！ 敵に \`${damage1}\` ダメージ！ (敵残りHP: ${wildHP})`);
-      } else {
-        myHP = Math.max(0, myHP - damage1);
-        combatLogs.push(`💥 **${first.name}** の引っかき！ 味方に \`${damage1}\` ダメージ！ (味方残りHP: ${myHP})`);
-      }
-
-      if (myHP <= 0 || wildHP <= 0) break;
-
-      // Second attacks first
-      let damage2 = Math.max(2, Math.floor(second.atk * 0.4 - first.def * 0.15) + Math.floor(Math.random() * 3));
-      if (second.isPlayer) {
-        wildHP = Math.max(0, wildHP - damage2);
-        combatLogs.push(`💥 **${second.name}** の突進！ 敵に \`${damage2}\` ダメージ！ (敵残りHP: ${wildHP})`);
-      } else {
-        myHP = Math.max(0, myHP - damage2);
-        combatLogs.push(`💥 **${second.name}** のつつき！ 味方に \`${damage2}\` ダメージ！ (味方残りHP: ${myHP})`);
-      }
-
-      round++;
+    // Initialize session and start turn-based interactive battle
+    const areaId = (customId === 'encounter_battle') ? (player.current_area || 'FOREST') : 'FOREST';
+    let weatherId = 'Sunny';
+    const activeWeatherRow = db.prepare("SELECT setting_value FROM settings WHERE player_id = ? AND setting_key = 'active_weather'").get(userId);
+    if (activeWeatherRow) {
+      weatherId = activeWeatherRow.setting_value;
     }
 
-    let xpMsg = '';
-    let rewardMsg = '';
-    if (myHP > 0 && wildHP <= 0) {
-      winner = 'PLAYER';
-      combatLogs.push(`\n🏆 **味方の勝利！**`);
-      
-      // Award XP
-      const xpGained = 20 + Math.floor(myMonster.level * 1.5);
-      
-      // Level curves: 50 * level ^ 1.4
-      const getXPNeeded = (l) => Math.floor(50 * Math.pow(l, 1.4));
-      let newLvl = myMonster.level;
-      let finalXP = myMonster.exp + xpGained;
-      let leveledUp = false;
+    // Clear any existing battle session
+    activeBattles.delete(userId);
 
-      while (true) {
-        const needed = getXPNeeded(newLvl);
-        if (finalXP >= needed) {
-          finalXP -= needed;
-          newLvl += 1;
-          leveledUp = true;
-        } else {
-          break;
-        }
-      }
+    const session = {
+      userId: userId,
+      type: (customId === 'encounter_battle') ? 'WILD' : 'MOCK',
+      myMonster: myMonster,
+      opponentMonster: wildMonster,
+      myHP: myMonster.hp,
+      opponentHP: wildMonster.hp,
+      myShield: false,
+      opponentShield: false,
+      myStatus: 'NONE',
+      opponentStatus: 'NONE',
+      mySleepTurns: 0,
+      opponentSleepTurns: 0,
+      areaId: areaId,
+      weatherId: weatherId,
+      combatLogs: ['⚔ 戦闘開始！コマンドを選択してください。'],
+      turn: 1
+    };
 
-      if (leveledUp) {
-        const newStats = calculateMonsterStats(myMonster.monster_no, newLvl, myMonster.personality);
-        db.prepare(`
-          UPDATE monsters SET 
-            level = ?, exp = ?, hp = ?, max_hp = ?,
-            attack = ?, defense = ?, speed = ?, intelligence = ?, charm = ?
-          WHERE id = ?
-        `).run(
-          newLvl, finalXP, newStats.hp, newStats.max_hp,
-          newStats.attack, newStats.defense, newStats.speed, newStats.intelligence, newStats.charm,
-          myMonster.id
-        );
-        xpMsg = `\n🌟 **${myMonster.nickname}** は \`${xpGained}\` EXPを獲得！ **Lv.${myMonster.level} ➡️ Lv.${newLvl}** に上がった！`;
-      } else {
-        db.prepare('UPDATE monsters SET exp = ? WHERE id = ?').run(finalXP, myMonster.id);
-        xpMsg = `\n🌟 **${myMonster.nickname}** は \`${xpGained}\` EXPを獲得しました！`;
-      }
+    activeBattles.set(userId, session);
 
-      // Money reward
-      const moneyGained = 30 + Math.floor(Math.random() * 20);
-      savePlayer(userId, { money: player.money + moneyGained });
-      rewardMsg = `🪙 勝利報酬として **$${moneyGained}** を獲得！`;
-      
-      // Clear active encounter
-      db.prepare("DELETE FROM settings WHERE player_id = ? AND setting_key = 'active_encounter'").run(userId);
-      savePlayer(userId, { current_state: 'IDLE' });
-    } else if (myHP <= 0) {
-      winner = 'WILD';
-      combatLogs.push(`\n💀 **味方の敗北...**`);
-      
-      // Small consolation prize
-      xpMsg = `\n🌟 経験値は得られませんでした。もっとトレーニングしよう！`;
-      
-      // Clear active encounter
-      db.prepare("DELETE FROM settings WHERE player_id = ? AND setting_key = 'active_encounter'").run(userId);
-      savePlayer(userId, { current_state: 'IDLE' });
-    } else {
-      combatLogs.push(`\n⏳ **引き分け！時間切れです。**`);
-      // Clear active encounter
-      db.prepare("DELETE FROM settings WHERE player_id = ? AND setting_key = 'active_encounter'").run(userId);
-      savePlayer(userId, { current_state: 'IDLE' });
-    }
+    // Set player state to BATTLE
+    savePlayer(userId, { current_state: 'BATTLE' });
+
+    // Generate initial battle card image
+    const cardBuffer = await generateBattleCard(
+      myMonster, wildMonster, session.myHP, session.opponentHP, 
+      session.myStatus, session.opponentStatus, areaId, weatherId
+    );
+    const attachment = new AttachmentBuilder(cardBuffer, { name: 'battle.png' });
 
     const embed = new EmbedBuilder()
-      .setTitle(customId === 'encounter_battle' ? `⚔ バトル結果: VS ${wildMonster.name}` : '⚔ 模擬戦バトル結果')
-      .setDescription(
-        combatLogs.join('\n') + `\n` + xpMsg + `\n` + rewardMsg
-      )
-      .setColor(winner === 'PLAYER' ? '#4CAF50' : '#F44336');
+      .setTitle(session.type === 'WILD' ? `⚔ 野生戦闘: VS ${wildMonster.name}` : `⚔ 模擬戦闘: VS ${wildMonster.name}`)
+      .setDescription(session.combatLogs.join('\n'))
+      .setImage('attachment://battle.png')
+      .setColor('#FF5722');
 
-    const buttons = [];
-    if (customId === 'encounter_battle' && player.current_area) {
-      buttons.push(
-        new ButtonBuilder()
-          .setCustomId('explore_proceed')
-          .setLabel('👣 調査を続ける')
-          .setStyle(ButtonStyle.Success)
-      );
-    }
-    buttons.push(
-      new ButtonBuilder()
-        .setCustomId(customId === 'encounter_battle' ? 'menu_mypage' : 'menu_battle')
-        .setLabel(customId === 'encounter_battle' ? '本部に戻る' : 'もう一度バトルする')
-        .setStyle(ButtonStyle.Primary)
+    const row = new ActionRowBuilder().addComponents(
+      new ButtonBuilder().setCustomId('battle_action_attack').setLabel('⚔ 攻撃').setStyle(ButtonStyle.Danger),
+      new ButtonBuilder().setCustomId('battle_action_defense').setLabel('🛡 防御').setStyle(ButtonStyle.Primary),
+      new ButtonBuilder().setCustomId('battle_action_special').setLabel('✨ 特技').setStyle(ButtonStyle.Success)
     );
-
-    const row = new ActionRowBuilder().addComponents(buttons);
 
     return interaction.editReply({
       embeds: [embed],
-      files: [],
+      files: [attachment],
+      components: [row]
+    });
+  }
+
+  // ----------------------------------------------------
+  // INTERACTIVE BATTLE ACTION HANDLERS
+  // ----------------------------------------------------
+  if (customId === 'battle_action_attack' || customId === 'battle_action_defense' || customId === 'battle_action_special') {
+    await interaction.deferUpdate();
+    const session = activeBattles.get(userId);
+
+    if (!session) {
+      return interaction.followUp({ content: '戦闘セッションが見つかりません。期限切れか既に終了した可能性があります。', ephemeral: true });
+    }
+
+    session.combatLogs = []; // Clear logs for this turn
+    session.combatLogs.push(`**[ターン ${session.turn}]**`);
+
+    // Reset shields at start of turn (they only last 1 turn)
+    session.myShield = false;
+    session.opponentShield = false;
+
+    // --------------------------------------------------
+    // 1. PLAYER'S TURN START & STATUS AILMENT CHECK
+    // --------------------------------------------------
+    let playerCanAct = true;
+
+    if (session.myStatus === 'SLEEP') {
+      session.mySleepTurns--;
+      if (session.mySleepTurns <= 0) {
+        session.myStatus = 'NONE';
+        session.combatLogs.push(`💤 **${session.myMonster.nickname}** は目が覚めた！`);
+      } else {
+        session.combatLogs.push(`💤 **${session.myMonster.nickname}** はぐっすり眠っている...`);
+        playerCanAct = false;
+      }
+    } else if (session.myStatus === 'PARALYSIS') {
+      if (Math.random() < 0.3) {
+        session.combatLogs.push(`⚡ **${session.myMonster.nickname}** は体がしびれて動けない！`);
+        playerCanAct = false;
+      }
+    }
+
+    // --------------------------------------------------
+    // 2. PLAYER'S ACTION EXECUTION
+    // --------------------------------------------------
+    if (playerCanAct) {
+      if (customId === 'battle_action_attack') {
+        const dmg = Math.max(1, Math.floor((session.myMonster.attack * 0.5) - (session.opponentMonster.defense * 0.25) + Math.random() * 5));
+        session.opponentHP -= dmg;
+        session.combatLogs.push(`💥 **${session.myMonster.nickname}** の攻撃！ **${session.opponentMonster.name}** に \`${dmg}\` ダメージ！`);
+      } 
+      else if (customId === 'battle_action_defense') {
+        session.myShield = true;
+        session.combatLogs.push(`🛡 **${session.myMonster.nickname}** は守りを固めている！`);
+      } 
+      else if (customId === 'battle_action_special') {
+        // Type-based special skill
+        const type = MONSTERS[session.myMonster.monster_no]?.type || '無';
+        
+        if (type === '炎') {
+          const dmg = Math.max(1, Math.floor((session.myMonster.attack * 0.75) - (session.opponentMonster.defense * 0.25) + Math.random() * 8));
+          session.opponentHP -= dmg;
+          session.combatLogs.push(`🔥 **${session.myMonster.nickname}** の **火の粉**！ **${session.opponentMonster.name}** に \`${dmg}\` 大ダメージ！`);
+        } 
+        else if (type === '水') {
+          const dmg = Math.max(1, Math.floor((session.myMonster.attack * 0.4) - (session.opponentMonster.defense * 0.2) + Math.random() * 4));
+          session.opponentHP -= dmg;
+          session.myHP = Math.min(session.myMonster.max_hp, session.myHP + 15);
+          session.combatLogs.push(`💧 **${session.myMonster.nickname}** の **水鉄砲**！ **${session.opponentMonster.name}** に \`${dmg}\` ダメージ！さらに自分のHPを \`15\` 回復！`);
+        } 
+        else if (type === '草') {
+          const dmg = Math.max(1, Math.floor((session.myMonster.attack * 0.3) - (session.opponentMonster.defense * 0.2) + Math.random() * 3));
+          session.opponentHP -= dmg;
+          session.combatLogs.push(`🍃 **${session.myMonster.nickname}** の **毒の粉**！ **${session.opponentMonster.name}** に \`${dmg}\` ダメージ！`);
+          if (session.opponentStatus === 'NONE' && Math.random() < 0.5) {
+            session.opponentStatus = 'POISON';
+            session.combatLogs.push(`😈 **${session.opponentMonster.name}** はどく状態になった！`);
+          }
+        } 
+        else if (type === '雷') {
+          const dmg = Math.max(2, Math.floor((session.myMonster.attack * 0.45) + Math.random() * 5)); // Ignore defense
+          session.opponentHP -= dmg;
+          session.combatLogs.push(`⚡ **${session.myMonster.nickname}** の **10万ボルト**！ 防御を貫通して **${session.opponentMonster.name}** に \`${dmg}\` ダメージ！`);
+          if (session.opponentStatus === 'NONE' && Math.random() < 0.3) {
+            session.opponentStatus = 'PARALYSIS';
+            session.combatLogs.push(`⚡ **${session.opponentMonster.name}** はまひ状態になった！`);
+          }
+        } 
+        else if (type === '鋼') {
+          session.myShield = true;
+          session.combatLogs.push(`🔩 **${session.myMonster.nickname}** の **鉄壁**！ ガードを完全に固めた！`);
+        } 
+        else if (type === '超') {
+          session.combatLogs.push(`🔮 **${session.myMonster.nickname}** の **催眠術**！`);
+          if (session.opponentStatus === 'NONE' && Math.random() < 0.6) {
+            session.opponentStatus = 'SLEEP';
+            session.opponentSleepTurns = 1 + Math.floor(Math.random() * 2);
+            session.combatLogs.push(`💤 **${session.opponentMonster.name}** は眠ってしまった！`);
+          } else {
+            session.combatLogs.push(`🍃 しかし、術は不発に終わった。`);
+          }
+        } 
+        else {
+          let isCrit = Math.random() < 0.35;
+          let mult = isCrit ? 1.5 : 1.0;
+          const dmg = Math.max(1, Math.floor(((session.myMonster.attack * 0.5) - (session.opponentMonster.defense * 0.25)) * mult + Math.random() * 5));
+          session.opponentHP -= dmg;
+          session.combatLogs.push(`${isCrit ? '🎯 **会心の一撃！** ' : ''}⚪ **${session.myMonster.nickname}** の **体当たり**！ **${session.opponentMonster.name}** に \`${dmg}\` ダメージ！`);
+        }
+      }
+    }
+
+    // Check opponent death immediately
+    if (session.opponentHP <= 0) {
+      activeBattles.delete(userId);
+      return executeBattleEnd(interaction, session, 'PLAYER');
+    }
+
+    // --------------------------------------------------
+    // 4. OPPONENT'S (AI) TURN START & STATUS AILMENT CHECK
+    // --------------------------------------------------
+    let opponentCanAct = true;
+
+    if (session.opponentStatus === 'SLEEP') {
+      session.opponentSleepTurns--;
+      if (session.opponentSleepTurns <= 0) {
+        session.opponentStatus = 'NONE';
+        session.combatLogs.push(`💤 **${session.opponentMonster.name}** は目が覚めた！`);
+      } else {
+        session.combatLogs.push(`💤 **${session.opponentMonster.name}** はぐっすり眠っている...`);
+        opponentCanAct = false;
+      }
+    } else if (session.opponentStatus === 'PARALYSIS') {
+      if (Math.random() < 0.3) {
+        session.combatLogs.push(`⚡ **${session.opponentMonster.name}** は体がしびれて動けない！`);
+        opponentCanAct = false;
+      }
+    }
+
+    // --------------------------------------------------
+    // 5. OPPONENT'S ACTION EXECUTION
+    // --------------------------------------------------
+    if (opponentCanAct) {
+      const aiRoll = Math.random();
+      
+      if (aiRoll < 0.70) {
+        let dmg = Math.max(1, Math.floor((session.opponentMonster.attack * 0.5) - (session.myMonster.defense * 0.25) + Math.random() * 5));
+        if (session.myShield) {
+          const type = MONSTERS[session.myMonster.monster_no]?.type || '無';
+          if (type === '鋼' && customId === 'battle_action_special') {
+            dmg = Math.max(1, Math.floor(dmg * 0.25));
+            const reflect = 5 + Math.floor(Math.random() * 5);
+            session.opponentHP -= reflect;
+            session.combatLogs.push(`💥 **${session.opponentMonster.name}** の攻撃！ **${session.myMonster.nickname}** に \`${dmg}\` ダメージ！ (鉄壁で75%カット)`);
+            session.combatLogs.push(`🔩 **${session.myMonster.nickname}** は反射ダメージで **${session.opponentMonster.name}** に \`${reflect}\` ダメージを与えた！`);
+          } else {
+            dmg = Math.max(1, Math.floor(dmg * 0.5));
+            session.combatLogs.push(`💥 **${session.opponentMonster.name}** の攻撃！ **${session.myMonster.nickname}** に \`${dmg}\` ダメージ！ (ガードした)`);
+          }
+        } else {
+          session.combatLogs.push(`💥 **${session.opponentMonster.name}** の攻撃！ **${session.myMonster.nickname}** に \`${dmg}\` ダメージ！`);
+        }
+        session.myHP -= dmg;
+      } 
+      else if (aiRoll < 0.85) {
+        session.opponentShield = true;
+        session.combatLogs.push(`🛡 **${session.opponentMonster.name}** は守りを固めている！`);
+      } 
+      else {
+        const oppType = MONSTERS[session.opponentMonster.monster_no]?.type || '無';
+        
+        if (oppType === '炎') {
+          let dmg = Math.max(1, Math.floor((session.opponentMonster.attack * 0.75) - (session.myMonster.defense * 0.25) + Math.random() * 8));
+          if (session.myShield) dmg = Math.max(1, Math.floor(dmg * 0.5));
+          session.myHP -= dmg;
+          session.combatLogs.push(`🔥 **${session.opponentMonster.name}** の **火の粉**！ **${session.myMonster.nickname}** に \`${dmg}\` 大ダメージ！`);
+        } 
+        else if (oppType === '水') {
+          let dmg = Math.max(1, Math.floor((session.opponentMonster.attack * 0.4) - (session.myMonster.defense * 0.2) + Math.random() * 4));
+          if (session.myShield) dmg = Math.max(1, Math.floor(dmg * 0.5));
+          session.myHP -= dmg;
+          session.opponentHP = Math.min(session.opponentMonster.max_hp, session.opponentHP + 15);
+          session.combatLogs.push(`💧 **${session.opponentMonster.name}** の **水鉄砲**！ **${session.myMonster.nickname}** に \`${dmg}\` ダメージ！さらにHPを \`15\` 回復！`);
+        } 
+        else if (oppType === '草') {
+          let dmg = Math.max(1, Math.floor((session.opponentMonster.attack * 0.3) - (session.myMonster.defense * 0.2) + Math.random() * 3));
+          if (session.myShield) dmg = Math.max(1, Math.floor(dmg * 0.5));
+          session.myHP -= dmg;
+          session.combatLogs.push(`🍃 **${session.opponentMonster.name}** の **毒の粉**！ **${session.myMonster.nickname}** に \`${dmg}\` ダメージ！`);
+          if (session.myStatus === 'NONE' && Math.random() < 0.5) {
+            session.myStatus = 'POISON';
+            session.combatLogs.push(`😈 **${session.myMonster.nickname}** はどく状態になった！`);
+          }
+        } 
+        else if (oppType === '雷') {
+          const dmg = Math.max(2, Math.floor((session.opponentMonster.attack * 0.45) + Math.random() * 5));
+          session.myHP -= dmg;
+          session.combatLogs.push(`⚡ **${session.opponentMonster.name}** の **10万ボルト**！ 防御を貫通して **${session.myMonster.nickname}** に \`${dmg}\` ダメージ！`);
+          if (session.myStatus === 'NONE' && Math.random() < 0.3) {
+            session.myStatus = 'PARALYSIS';
+            session.combatLogs.push(`⚡ **${session.myMonster.nickname}** はまひ状態になった！`);
+          }
+        } 
+        else if (oppType === '鋼') {
+          session.opponentShield = true;
+          session.combatLogs.push(`🔩 **${session.opponentMonster.name}** の **鉄壁**！`);
+        } 
+        else if (oppType === '超') {
+          session.combatLogs.push(`🔮 **${session.opponentMonster.name}** の **催眠術**！`);
+          if (session.myStatus === 'NONE' && Math.random() < 0.6) {
+            session.myStatus = 'SLEEP';
+            session.mySleepTurns = 1 + Math.floor(Math.random() * 2);
+            session.combatLogs.push(`💤 **${session.myMonster.nickname}** は眠ってしまった！`);
+          } else {
+            session.combatLogs.push(`🍃 しかし、術は不発に終わった。`);
+          }
+        } 
+        else {
+          let isCrit = Math.random() < 0.35;
+          let mult = isCrit ? 1.5 : 1.0;
+          let dmg = Math.max(1, Math.floor(((session.opponentMonster.attack * 0.5) - (session.myMonster.defense * 0.25)) * mult + Math.random() * 5));
+          if (session.myShield) dmg = Math.max(1, Math.floor(dmg * 0.5));
+          session.myHP -= dmg;
+          session.combatLogs.push(`${isCrit ? '🎯 **会心の一撃！** ' : ''}⚪ **${session.opponentMonster.name}** の **体当たり**！ **${session.myMonster.nickname}** に \`${dmg}\` ダメージ！`);
+        }
+      }
+    }
+
+    // Check opponent reflect/poison death (e.g. reflection kills AI on its turn)
+    if (session.opponentHP <= 0) {
+      activeBattles.delete(userId);
+      return executeBattleEnd(interaction, session, 'PLAYER');
+    }
+
+    // Check player death
+    if (session.myHP <= 0) {
+      activeBattles.delete(userId);
+      return executeBattleEnd(interaction, session, 'WILD');
+    }
+
+    // --------------------------------------------------
+    // 6. END OF TURN SLIP DAMAGE (POISON CHECK)
+    // --------------------------------------------------
+    if (session.myStatus === 'POISON') {
+      const poisonDmg = Math.max(1, Math.floor(session.myMonster.max_hp * 0.10));
+      session.myHP -= poisonDmg;
+      session.combatLogs.push(`😈 **${session.myMonster.nickname}** は毒のダメージを受けている！ (\`-${poisonDmg}\` HP)`);
+    }
+
+    if (session.opponentStatus === 'POISON') {
+      const poisonDmg = Math.max(1, Math.floor(session.opponentMonster.max_hp * 0.10));
+      session.opponentHP -= poisonDmg;
+      session.combatLogs.push(`😈 **${session.opponentMonster.name}** は毒 of のダメージを受けている！ (\`-${poisonDmg}\` HP)`);
+    }
+
+    // Check double death or win/lose from poison
+    if (session.opponentHP <= 0 && session.myHP <= 0) {
+      activeBattles.delete(userId);
+      return executeBattleEnd(interaction, session, 'DRAW');
+    }
+    if (session.opponentHP <= 0) {
+      activeBattles.delete(userId);
+      return executeBattleEnd(interaction, session, 'PLAYER');
+    }
+    if (session.myHP <= 0) {
+      activeBattles.delete(userId);
+      return executeBattleEnd(interaction, session, 'WILD');
+    }
+
+    // --------------------------------------------------
+    // 7. RENDER NEXT TURN
+    // --------------------------------------------------
+    session.turn++;
+
+    const cardBuffer = await generateBattleCard(
+      session.myMonster, session.opponentMonster, session.myHP, session.opponentHP,
+      session.myStatus, session.opponentStatus, session.areaId, session.weatherId
+    );
+    const attachment = new AttachmentBuilder(cardBuffer, { name: 'battle.png' });
+
+    const embed = new EmbedBuilder()
+      .setTitle(session.type === 'WILD' ? `⚔ 野生戦闘: VS ${session.opponentMonster.name}` : `⚔ 模擬戦闘: VS ${session.opponentMonster.name}`)
+      .setDescription(session.combatLogs.join('\n'))
+      .setImage('attachment://battle.png')
+      .setColor('#FF5722');
+
+    const row = new ActionRowBuilder().addComponents(
+      new ButtonBuilder().setCustomId('battle_action_attack').setLabel('⚔ 攻撃').setStyle(ButtonStyle.Danger),
+      new ButtonBuilder().setCustomId('battle_action_defense').setLabel('🛡 防御').setStyle(ButtonStyle.Primary),
+      new ButtonBuilder().setCustomId('battle_action_special').setLabel('✨ 特技').setStyle(ButtonStyle.Success)
+    );
+
+    return interaction.editReply({
+      embeds: [embed],
+      files: [attachment],
       components: [row]
     });
   }
@@ -1564,4 +1775,113 @@ export async function handleButton(interaction) {
       components: []
     });
   }
+}
+
+/**
+ * Executes post-combat rewards, experience gains, level curves, and resets status states
+ */
+async function executeBattleEnd(interaction, session, winner) {
+  const userId = session.userId;
+  const myMonster = session.myMonster;
+  const wildMonster = session.opponentMonster;
+  const player = getPlayer(userId);
+
+  const combatLogs = [];
+  let xpMsg = '';
+  let rewardMsg = '';
+
+  if (winner === 'PLAYER') {
+    combatLogs.push(`🏆 **味方の勝利！**`);
+    
+    // Award XP
+    const xpGained = 20 + Math.floor(myMonster.level * 1.5);
+    const getXPNeeded = (l) => Math.floor(50 * Math.pow(l, 1.4));
+    let newLvl = myMonster.level;
+    let finalXP = myMonster.exp + xpGained;
+    let leveledUp = false;
+
+    while (true) {
+      const needed = getXPNeeded(newLvl);
+      if (finalXP >= needed) {
+        finalXP -= needed;
+        newLvl += 1;
+        leveledUp = true;
+      } else {
+        break;
+      }
+    }
+
+    if (leveledUp) {
+      const newStats = calculateMonsterStats(myMonster.monster_no, newLvl, myMonster.personality);
+      db.prepare(`
+        UPDATE monsters SET 
+          level = ?, exp = ?, hp = ?, max_hp = ?,
+          attack = ?, defense = ?, speed = ?, intelligence = ?, charm = ?
+        WHERE id = ?
+      `).run(
+        newLvl, finalXP, newStats.hp, newStats.max_hp,
+        newStats.attack, newStats.defense, newStats.speed, newStats.intelligence, newStats.charm,
+        myMonster.id
+      );
+      xpMsg = `🌟 **${myMonster.nickname}** は \`${xpGained}\` EXPを獲得！ **Lv.${myMonster.level} ➡️ Lv.${newLvl}** に上がった！`;
+    } else {
+      db.prepare('UPDATE monsters SET exp = ? WHERE id = ?').run(finalXP, myMonster.id);
+      xpMsg = `🌟 **${myMonster.nickname}** は \`${xpGained}\` EXPを獲得しました！`;
+    }
+
+    // Money reward
+    const moneyGained = 30 + Math.floor(Math.random() * 20);
+    savePlayer(userId, { money: player.money + moneyGained });
+    rewardMsg = `🪙 勝利報酬として **$${moneyGained}** を獲得！`;
+
+    // Clear active encounter if it was wild
+    if (session.type === 'WILD') {
+      db.prepare("DELETE FROM settings WHERE player_id = ? AND setting_key = 'active_encounter'").run(userId);
+    }
+  } else if (winner === 'WILD') {
+    combatLogs.push(`💀 **味方の敗北...**`);
+    xpMsg = `🌟 経験値は得られませんでした。もっとトレーニングしよう！`;
+    if (session.type === 'WILD') {
+      db.prepare("DELETE FROM settings WHERE player_id = ? AND setting_key = 'active_encounter'").run(userId);
+    }
+  } else {
+    combatLogs.push(`⏳ **引き分け！**`);
+    if (session.type === 'WILD') {
+      db.prepare("DELETE FROM settings WHERE player_id = ? AND setting_key = 'active_encounter'").run(userId);
+    }
+  }
+
+  // Clear player state back to IDLE
+  savePlayer(userId, { current_state: 'IDLE' });
+
+  const embed = new EmbedBuilder()
+    .setTitle(session.type === 'WILD' ? `⚔ バトル結果: VS ${wildMonster.name}` : '⚔ 模擬戦結果')
+    .setDescription(
+      combatLogs.join('\n') + `\n\n` + xpMsg + `\n` + rewardMsg
+    )
+    .setColor(winner === 'PLAYER' ? '#4CAF50' : '#F44336');
+
+  const buttons = [];
+  if (session.type === 'WILD' && player.current_area) {
+    buttons.push(
+      new ButtonBuilder()
+        .setCustomId('explore_proceed')
+        .setLabel('👣 調査を続ける')
+        .setStyle(ButtonStyle.Success)
+    );
+  }
+  buttons.push(
+    new ButtonBuilder()
+      .setCustomId(session.type === 'WILD' ? 'explore_leave' : 'menu_battle')
+      .setLabel(session.type === 'WILD' ? '本部に戻る' : 'もう一度バトルする')
+      .setStyle(ButtonStyle.Primary)
+  );
+
+  const row = new ActionRowBuilder().addComponents(buttons);
+
+  return interaction.editReply({
+    embeds: [embed],
+    files: [], // Clear card image from result
+    components: [row]
+  });
 }

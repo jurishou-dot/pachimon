@@ -421,6 +421,205 @@ export async function generateEncounterCard(wildMonster, areaId, weatherId) {
 }
 
 /**
+ * Renders the interactive turn-based battle image card
+ */
+export async function generateBattleCard(myMonster, opponentMonster, myHP, opponentHP, myStatus, opponentStatus, areaId, weatherId) {
+  const canvas = createCanvas(600, 400);
+  const ctx = canvas.getContext('2d');
+  const area = AREAS[areaId] || AREAS.FOREST;
+  const weather = WEATHERS[weatherId] || WEATHERS.Sunny;
+
+  // 1. Try to load background image
+  const bgPath = join(process.cwd(), 'assets', 'background', `${areaId}.png`);
+  const bgImg = await tryLoadLocalImage(bgPath);
+
+  if (bgImg) {
+    ctx.drawImage(bgImg, 0, 0, 600, 400);
+  } else {
+    // Biome-based background gradient fallback
+    const grad = ctx.createLinearGradient(0, 0, 0, 400);
+    if (areaId === 'FOREST') {
+      grad.addColorStop(0, '#1E4620');
+      grad.addColorStop(1, '#0C200C');
+    } else if (areaId === 'SHOPPING_STREET') {
+      grad.addColorStop(0, '#ECEFF1');
+      grad.addColorStop(1, '#90A4AE');
+    } else if (areaId === 'ABANDONED_FACTORY') {
+      grad.addColorStop(0, '#37474F');
+      grad.addColorStop(1, '#1A237E');
+    } else if (areaId === 'BEACH') {
+      grad.addColorStop(0, '#E0F7FA');
+      grad.addColorStop(1, '#00838F');
+    } else if (areaId === 'MOUNTAIN') {
+      grad.addColorStop(0, '#78909C');
+      grad.addColorStop(1, '#37474F');
+    } else if (areaId === 'UNDERGROUND') {
+      grad.addColorStop(0, '#212121');
+      grad.addColorStop(1, '#000000');
+    } else if (areaId === 'CYBER_SPACE') {
+      grad.addColorStop(0, '#00E5FF');
+      grad.addColorStop(1, '#010020');
+    } else if (areaId === 'HOT_SPRING') {
+      grad.addColorStop(0, '#FFE0B2');
+      grad.addColorStop(1, '#E65100');
+    } else if (areaId === 'MARKET') {
+      grad.addColorStop(0, '#4A148C');
+      grad.addColorStop(1, '#1A0033');
+    } else {
+      grad.addColorStop(0, '#263238');
+      grad.addColorStop(1, '#0F171A');
+    }
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 600, 400);
+
+    // Draw grid helper (cyber look)
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 600; i += 40) {
+      ctx.beginPath();
+      ctx.moveTo(i, 0); ctx.lineTo(i, 400);
+      ctx.moveTo(0, i); ctx.lineTo(600, i);
+      ctx.stroke();
+    }
+  }
+
+  // 2. Draw framing border
+  ctx.strokeStyle = '#FFD700';
+  ctx.lineWidth = 6;
+  ctx.strokeRect(10, 10, 580, 380);
+
+  // 3. Draw opponent monster sprite in top-right
+  await drawMonsterSprite(ctx, opponentMonster.monster_no, 430, 150, 150);
+
+  // 4. Draw player's active monster sprite in bottom-left
+  await drawMonsterSprite(ctx, myMonster.monster_no, 170, 280, 150);
+
+  // 5. Draw Opponent Status Panel (Top-Left)
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+  ctx.strokeStyle = '#F44336';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.roundRect(30, 30, 250, 80, 8);
+  ctx.fill();
+  ctx.stroke();
+
+  // Opponent Name & Level
+  ctx.fillStyle = '#FFFFFF';
+  ctx.font = 'bold 16px "Segoe UI", Arial, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText(opponentMonster.name, 45, 55);
+
+  ctx.fillStyle = '#FFEB3B';
+  ctx.font = 'bold 14px "Segoe UI", Arial, sans-serif';
+  ctx.fillText(`Lv.${opponentMonster.level}`, 45, 75);
+
+  // Opponent HP value
+  ctx.fillStyle = '#CFD8DC';
+  ctx.font = '12px "Segoe UI", Arial, sans-serif';
+  ctx.textAlign = 'right';
+  ctx.fillText(`${Math.max(0, opponentHP)}/${opponentMonster.max_hp}`, 265, 55);
+
+  // Opponent HP Bar
+  ctx.fillStyle = '#37474F';
+  ctx.beginPath();
+  ctx.roundRect(45, 83, 220, 12, 6);
+  ctx.fill();
+
+  const oppHPPct = Math.max(0, opponentHP / opponentMonster.max_hp);
+  const oppHPBarColor = oppHPPct > 0.5 ? '#4CAF50' : (oppHPPct > 0.2 ? '#FF9800' : '#F44336');
+  ctx.fillStyle = oppHPBarColor;
+  ctx.beginPath();
+  ctx.roundRect(45, 83, Math.max(0, 220 * oppHPPct), 12, 6);
+  ctx.fill();
+
+  // Opponent Status Ailment badge
+  if (opponentStatus && opponentStatus !== 'NONE') {
+    let badgeText = '';
+    let badgeColor = '';
+    if (opponentStatus === 'POISON') { badgeText = 'どく'; badgeColor = '#9C27B0'; }
+    else if (opponentStatus === 'PARALYSIS') { badgeText = 'まひ'; badgeColor = '#FFEB3B'; }
+    else if (opponentStatus === 'SLEEP') { badgeText = 'ねむり'; badgeColor = '#00BCD4'; }
+
+    ctx.fillStyle = badgeColor;
+    ctx.beginPath();
+    ctx.roundRect(180, 63, 50, 16, 4);
+    ctx.fill();
+    ctx.fillStyle = badgeColor === '#FFEB3B' ? '#000000' : '#FFFFFF';
+    ctx.font = 'bold 10px "Segoe UI", Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(badgeText, 205, 75);
+  }
+
+  // 6. Draw Player Status Panel (Bottom-Right)
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+  ctx.strokeStyle = '#4CAF50';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.roundRect(320, 280, 250, 85, 8);
+  ctx.fill();
+  ctx.stroke();
+
+  // Player Name & Level
+  ctx.fillStyle = '#FFFFFF';
+  ctx.font = 'bold 16px "Segoe UI", Arial, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText(myMonster.nickname, 335, 305);
+
+  ctx.fillStyle = '#FFEB3B';
+  ctx.font = 'bold 14px "Segoe UI", Arial, sans-serif';
+  ctx.fillText(`Lv.${myMonster.level}`, 335, 325);
+
+  // Player HP value
+  ctx.fillStyle = '#CFD8DC';
+  ctx.font = '12px "Segoe UI", Arial, sans-serif';
+  ctx.textAlign = 'right';
+  ctx.fillText(`${Math.max(0, myHP)}/${myMonster.max_hp}`, 555, 305);
+
+  // Player HP Bar
+  ctx.fillStyle = '#37474F';
+  ctx.beginPath();
+  ctx.roundRect(335, 335, 220, 12, 6);
+  ctx.fill();
+
+  const myHPPct = Math.max(0, myHP / myMonster.max_hp);
+  const myHPBarColor = myHPPct > 0.5 ? '#4CAF50' : (myHPPct > 0.2 ? '#FF9800' : '#F44336');
+  ctx.fillStyle = myHPBarColor;
+  ctx.beginPath();
+  ctx.roundRect(335, 335, Math.max(0, 220 * myHPPct), 12, 6);
+  ctx.fill();
+
+  // Player Status Ailment badge
+  if (myStatus && myStatus !== 'NONE') {
+    let badgeText = '';
+    let badgeColor = '';
+    if (myStatus === 'POISON') { badgeText = 'どく'; badgeColor = '#9C27B0'; }
+    else if (myStatus === 'PARALYSIS') { badgeText = 'まひ'; badgeColor = '#FFEB3B'; }
+    else if (myStatus === 'SLEEP') { badgeText = 'ねむり'; badgeColor = '#00BCD4'; }
+
+    ctx.fillStyle = badgeColor;
+    ctx.beginPath();
+    ctx.roundRect(470, 313, 50, 16, 4);
+    ctx.fill();
+    ctx.fillStyle = badgeColor === '#FFEB3B' ? '#000000' : '#FFFFFF';
+    ctx.font = 'bold 10px "Segoe UI", Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(badgeText, 495, 325);
+  }
+
+  // 7. Weather label in top center
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+  ctx.beginPath();
+  ctx.roundRect(260, 15, 80, 25, 4);
+  ctx.fill();
+  ctx.fillStyle = '#FFFFFF';
+  ctx.font = '12px "Segoe UI", Arial, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(`${weather.emoji} ${weather.name}`, 300, 32);
+
+  return canvas.toBuffer('image/png');
+}
+
+/**
  * Renders the player dashboard/profile card
  */
 export async function generateProfileCard(player, rankName, party, zukanCount) {
