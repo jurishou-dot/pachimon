@@ -383,70 +383,78 @@ export function addExperienceAndLevelUp(userId, monsterId, expGained) {
     finalXP = 0;
   }
 
-  let monsterNo = monster.monster_no;
-  let nickname = monster.nickname;
-  let evolved = false;
-  const oldName = MONSTERS[monsterNo]?.name || 'パチモン';
-  let newName = oldName;
-
-  while (true) {
-    const evo = EVOLUTIONS[monsterNo];
-    if (evo && newLvl >= evo.level) {
-      const prevTemplate = MONSTERS[monsterNo];
-      const nextTemplate = MONSTERS[evo.targetNo];
-      if (nextTemplate) {
-        if (!nickname || nickname === prevTemplate.name) {
-          nickname = nextTemplate.name;
-        }
-        monsterNo = evo.targetNo;
-        newName = nextTemplate.name;
-        evolved = true;
-      } else {
-        break;
-      }
-    } else {
-      break;
-    }
-  }
-
   let levelUpMsg = '';
-  let evolutionMsg = '';
 
-  if (leveledUp || evolved) {
-    const newStats = calculateMonsterStats(monsterNo, newLvl, monster.personality);
+  if (leveledUp) {
+    const newStats = calculateMonsterStats(monster.monster_no, newLvl, monster.personality);
     
     db.prepare(`
       UPDATE monsters SET 
-        monster_no = ?, nickname = ?, level = ?, exp = ?, hp = ?, max_hp = ?,
+        level = ?, exp = ?, hp = ?, max_hp = ?,
         attack = ?, defense = ?, speed = ?, intelligence = ?, charm = ?
       WHERE id = ?
     `).run(
-      monsterNo, nickname, newLvl, finalXP, newStats.hp, newStats.max_hp,
+      newLvl, finalXP, newStats.hp, newStats.max_hp,
       newStats.attack, newStats.defense, newStats.speed, newStats.intelligence, newStats.charm,
       monsterId
     );
 
-    if (leveledUp) {
-      levelUpMsg = `\n🆙 **レベルアップ！** Lv.${currentLvl} ➡️ **Lv.${newLvl}** に上昇！ ステータスが強化されました。`;
-    }
-    if (evolved) {
-      evolutionMsg = `\n✨ **進化！** **${oldName}** は **${newName}** に進化した！`;
-      // Update Codex to PROTECTED
-      updateEncyclopedia(userId, monsterNo, 'PROTECTED');
-    }
+    levelUpMsg = `\n🆙 **レベルアップ！** Lv.${currentLvl} ➡️ **Lv.${newLvl}** に上昇！ ステータスが強化されました。`;
   } else {
     db.prepare('UPDATE monsters SET exp = ? WHERE id = ?').run(finalXP, monsterId);
   }
 
   return {
     leveledUp,
-    evolved,
+    evolved: false,
     oldLevel: currentLvl,
     newLevel: newLvl,
-    oldName,
-    newName,
     levelUpMsg,
-    evolutionMsg
+    evolutionMsg: ''
   };
 }
+
+export function evolveMonster(userId, monsterId) {
+  const monster = db.prepare('SELECT * FROM monsters WHERE id = ? AND player_id = ?').get(monsterId, userId);
+  if (!monster) return null;
+
+  const evo = EVOLUTIONS[monster.monster_no];
+  if (!evo || monster.level < evo.level) return null;
+
+  const prevTemplate = MONSTERS[monster.monster_no];
+  const nextTemplate = MONSTERS[evo.targetNo];
+  if (!nextTemplate) return null;
+
+  const oldName = prevTemplate.name;
+  const newName = nextTemplate.name;
+  let nickname = monster.nickname;
+
+  if (!nickname || nickname === prevTemplate.name) {
+    nickname = nextTemplate.name;
+  }
+
+  const monsterNo = evo.targetNo;
+  const newStats = calculateMonsterStats(monsterNo, monster.level, monster.personality);
+
+  db.prepare(`
+    UPDATE monsters SET 
+      monster_no = ?, nickname = ?, hp = ?, max_hp = ?,
+      attack = ?, defense = ?, speed = ?, intelligence = ?, charm = ?
+    WHERE id = ?
+  `).run(
+    monsterNo, nickname, newStats.hp, newStats.max_hp,
+    newStats.attack, newStats.defense, newStats.speed, newStats.intelligence, newStats.charm,
+    monsterId
+  );
+
+  // Update Codex to PROTECTED (using 図鑑 terminology updates)
+  updateEncyclopedia(userId, monsterNo, 'PROTECTED');
+
+  return {
+    oldName,
+    newName,
+    nickname
+  };
+}
+
 

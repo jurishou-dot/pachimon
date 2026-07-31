@@ -34,7 +34,7 @@ export async function handleSelect(interaction) {
     const template = MONSTERS[monsterNo];
 
     if (!template) {
-      return interaction.editReply({ content: '無効なコーデックス番号です。', components: [] });
+      return interaction.editReply({ content: '無効な図鑑番号です。', components: [] });
     }
 
     const zukan = getEncyclopedia(userId);
@@ -44,14 +44,14 @@ export async function handleSelect(interaction) {
     const attachment = new AttachmentBuilder(cardBuffer, { name: 'zukan_card.png' });
 
     const embed = new EmbedBuilder()
-      .setTitle(`📖 コーデックス詳細: No.${String(monsterNo).padStart(3, '0')} ${template.name}`)
+      .setTitle(`📖 図鑑詳細: No.${String(monsterNo).padStart(3, '0')} ${template.name}`)
       .setImage('attachment://zukan_card.png')
       .setColor('#9E9E9E');
 
     const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId('menu_zukan')
-        .setLabel('コーデックスリストに戻る')
+        .setLabel('図鑑リストに戻る')
         .setStyle(ButtonStyle.Primary),
       new ButtonBuilder()
         .setCustomId('menu_mypage')
@@ -203,7 +203,7 @@ export async function handleSelect(interaction) {
         .setDescription(
           `おめでとう！ **${wildMonster.name}** (Lv.${wildMonster.level}) の保護に成功しました！\n` +
           `このパチモンはボックスに送られました。手持ちに加えることで育成できます。\n` +
-          `コーデックスデータが更新されました。`
+          `図鑑データが更新されました。`
         )
         .setImage('attachment://captured.png')
         .setColor('#4CAF50');

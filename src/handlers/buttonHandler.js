@@ -4,12 +4,13 @@ import {
   createMonster, getPlayerParty, getEncyclopedia, 
   getInventory, updateInventoryItem, getMissions, 
   claimMissionReward, updateMissionProgress, updateEncyclopedia, getPlayerMonsters,
-  addExperienceAndLevelUp
+  addExperienceAndLevelUp, evolveMonster
 } from '../database.js';
-import { MONSTERS, AREAS, PERSONALITIES, ITEMS, WEATHERS } from '../config.js';
+import { MONSTERS, AREAS, PERSONALITIES, ITEMS, WEATHERS, EVOLUTIONS } from '../config.js';
 import { 
   calculateMonsterStats, generateRandomWildMonster, 
-  getRankName, generateDailyMissionsBlueprint 
+  getRankName, generateDailyMissionsBlueprint,
+  getXPNeededForLevel
 } from '../utils/helpers.js';
 import { 
   generateProfileCard, generateEncounterCard, generateMonsterDetailCard, generateBattleCard
@@ -133,7 +134,7 @@ export async function handleButton(interaction) {
       .setColor('#00E5FF');
 
     const row1 = new ActionRowBuilder().addComponents(
-      new ButtonBuilder().setCustomId('menu_zukan').setLabel('📖 コーデックス').setStyle(ButtonStyle.Primary),
+      new ButtonBuilder().setCustomId('menu_zukan').setLabel('📖 図鑑').setStyle(ButtonStyle.Primary),
       new ButtonBuilder().setCustomId('menu_investigate').setLabel('🧭 調査').setStyle(ButtonStyle.Success),
       new ButtonBuilder().setCustomId('menu_party').setLabel('🎒 手持ち').setStyle(ButtonStyle.Secondary),
       new ButtonBuilder().setCustomId('menu_care').setLabel('🍖 お世話').setStyle(ButtonStyle.Secondary)
@@ -166,7 +167,7 @@ export async function handleButton(interaction) {
     const endNo = page === 1 ? 15 : 30;
 
     const embed = new EmbedBuilder()
-      .setTitle('📖 パチモン・コーデックス')
+      .setTitle('📖 パチモン大図鑑')
       .setDescription(
         `**調査完了率:** ${Math.floor((protectedCount / totalSpecies) * 100)}%\n` +
         `・保護した種類: \`${protectedCount} / ${totalSpecies}\` 種\n` +
@@ -456,15 +457,24 @@ export async function handleButton(interaction) {
     const inventory = getInventory(userId);
     const foodCount = inventory.food_standard || 0;
 
+    const evo = EVOLUTIONS[monster.monster_no];
+    const canEvolve = evo && monster.level >= evo.level;
+
+    let descriptionText = 
+      `何をしてあげますか？\n` +
+      `・ごはん：フードを1個消費してお腹を満たす(EXP+15)\n` +
+      `・遊ぶ：一緒に全力で遊ぶ(EXP+10)\n` +
+      `・休ませる：睡眠をとらせてリフレッシュ(EXP+8)\n` +
+      `・ブラッシング：優しく毛並みを整える(EXP+8)`;
+
+    if (canEvolve) {
+      const nextTemp = MONSTERS[evo.targetNo];
+      descriptionText += `\n\n✨ **進化可能！**\nこのパチモンは **${nextTemp?.name}** に進化できます！「進化させる」ボタンを押してください。`;
+    }
+
     const embed = new EmbedBuilder()
       .setTitle(`🍖 ${monster.nickname} のお世話パネル`)
-      .setDescription(
-        `何をしてあげますか？\n` +
-        `・ごはん：フードを1個消費してお腹を満たす(EXP+15)\n` +
-        `・遊ぶ：一緒に全力で遊ぶ(EXP+10)\n` +
-        `・休ませる：睡眠をとらせてリフレッシュ(EXP+8)\n` +
-        `・ブラッシング：優しく毛並みを整える(EXP+8)`
-      )
+      .setDescription(descriptionText)
       .addFields([
         { name: 'ステータス', value: `Lv.${monster.level} (EXP: ${monster.exp})`, inline: true },
         { name: '好物', value: monster.favorite_food, inline: true },
@@ -472,12 +482,20 @@ export async function handleButton(interaction) {
       ])
       .setColor('#E91E63');
 
-    const row = new ActionRowBuilder().addComponents(
+    const careButtons = [
       new ButtonBuilder().setCustomId(`care_action_feed_${monsterId}`).setLabel('🍖 ごはんをあげる').setStyle(ButtonStyle.Success).setDisabled(foodCount <= 0),
       new ButtonBuilder().setCustomId(`care_action_play_${monsterId}`).setLabel('🎾 一緒に遊ぶ').setStyle(ButtonStyle.Primary),
       new ButtonBuilder().setCustomId(`care_action_rest_${monsterId}`).setLabel('💤 休ませる').setStyle(ButtonStyle.Secondary),
       new ButtonBuilder().setCustomId(`care_action_brush_${monsterId}`).setLabel('🧼 ブラッシング').setStyle(ButtonStyle.Secondary)
-    );
+    ];
+
+    if (canEvolve) {
+      careButtons.push(
+        new ButtonBuilder().setCustomId(`care_action_evolve_${monsterId}`).setLabel('✨ 進化させる').setStyle(ButtonStyle.Primary)
+      );
+    }
+
+    const row = new ActionRowBuilder().addComponents(careButtons);
 
     const navRow = new ActionRowBuilder().addComponents(
       new ButtonBuilder().setCustomId('menu_care').setLabel('戻る').setStyle(ButtonStyle.Danger)
@@ -520,11 +538,21 @@ export async function handleButton(interaction) {
     } else if (action === 'brush') {
       xpGained = 8;
       message = `🧼 **${monster.nickname}** をブラッシングした！ 毛並みがツヤツヤになった！（EXP +${xpGained}）`;
+    } else if (action === 'evolve') {
+      const evoResult = evolveMonster(userId, monsterId);
+      if (evoResult) {
+        message = `✨ **進化！** **${evoResult.oldName}** は **${evoResult.newName}** に進化した！`;
+      } else {
+        message = `❌ 進化条件を満たしていません。`;
+      }
     }
 
-    // Apply XP & check Level up
-    const result = addExperienceAndLevelUp(userId, monsterId, xpGained);
-    const levelUpMsg = result ? (result.levelUpMsg + result.evolutionMsg) : '';
+    // Apply XP & check Level up (only if not evolving)
+    let levelUpMsg = '';
+    if (action !== 'evolve') {
+      const result = addExperienceAndLevelUp(userId, monsterId, xpGained);
+      levelUpMsg = result ? result.levelUpMsg : '';
+    }
 
     // Refresh monster data
     monster = db.prepare('SELECT * FROM monsters WHERE id = ? AND player_id = ?').get(monsterId, userId);
@@ -532,22 +560,39 @@ export async function handleButton(interaction) {
     const updatedInventory = getInventory(userId);
     const foodCount = updatedInventory.food_standard || 0;
 
+    const evo = EVOLUTIONS[monster.monster_no];
+    const canEvolve = evo && monster.level >= evo.level;
+
+    let descriptionText = `${message}${levelUpMsg}`;
+    if (canEvolve) {
+      const nextTemp = MONSTERS[evo.targetNo];
+      descriptionText += `\n\n✨ **進化可能！**\nこのパチモンは **${nextTemp?.name}** に進化できます！「進化させる」ボタンを押してください。`;
+    }
+
     const embed = new EmbedBuilder()
       .setTitle(`🍖 ${monster.nickname} のお世話パネル`)
-      .setDescription(`${message}${levelUpMsg}`)
+      .setDescription(descriptionText)
       .addFields([
-        { name: 'ステータス', value: `Lv.${monster.level} (EXP: ${monster.exp} / ${getXPNeeded(monster.level)})`, inline: true },
+        { name: 'ステータス', value: `Lv.${monster.level} (EXP: ${monster.exp} / ${getXPNeededForLevel(monster.level)})`, inline: true },
         { name: '好物', value: monster.favorite_food, inline: true },
         { name: 'パチモンフード在庫', value: `🍖 x${foodCount}個`, inline: true }
       ])
       .setColor('#E91E63');
 
-    const row = new ActionRowBuilder().addComponents(
+    const careButtons = [
       new ButtonBuilder().setCustomId(`care_action_feed_${monsterId}`).setLabel('🍖 ごはんをあげる').setStyle(ButtonStyle.Success).setDisabled(foodCount <= 0),
       new ButtonBuilder().setCustomId(`care_action_play_${monsterId}`).setLabel('🎾 一緒に遊ぶ').setStyle(ButtonStyle.Primary),
       new ButtonBuilder().setCustomId(`care_action_rest_${monsterId}`).setLabel('💤 休ませる').setStyle(ButtonStyle.Secondary),
       new ButtonBuilder().setCustomId(`care_action_brush_${monsterId}`).setLabel('🧼 ブラッシング').setStyle(ButtonStyle.Secondary)
-    );
+    ];
+
+    if (canEvolve) {
+      careButtons.push(
+        new ButtonBuilder().setCustomId(`care_action_evolve_${monsterId}`).setLabel('✨ 進化させる').setStyle(ButtonStyle.Primary)
+      );
+    }
+
+    const row = new ActionRowBuilder().addComponents(careButtons);
 
     const navRow = new ActionRowBuilder().addComponents(
       new ButtonBuilder().setCustomId('menu_care').setLabel('戻る').setStyle(ButtonStyle.Danger)
@@ -648,7 +693,7 @@ export async function handleButton(interaction) {
       await interaction.followUp({
         content: `🎁 **依頼達成報酬を獲得！**\n` +
                  `・資金: +$${rewards.money}\n` +
-                 `・コーデックス調査P: +${rewards.points}P\n` +
+                 `・図鑑ポイント: +${rewards.points}P\n` +
                  `・アイテム: ${itemsText}`,
         ephemeral: true
       });
