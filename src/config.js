@@ -467,6 +467,306 @@ export const MONSTERS = {
     favoriteFood: 'お茶',
     spawnAreas: ['ABANDONED_FACTORY']
   },
+  31: {
+    no: 31,
+    name: 'ココア',
+    type: '水',
+    description: '甘くて温かい飲み物型パチモン。冬の調査員に大人気。',
+    classification: '飲料系',
+    baseStats: { hp: 45, attack: 40, defense: 40, speed: 50, intelligence: 55, charm: 70 },
+    favoriteFood: 'グラニュー糖',
+    spawnAreas: ['BEACH', 'HOT_SPRING']
+  },
+  32: {
+    no: 32,
+    name: 'カフェオレ',
+    type: '水',
+    description: 'コーヒーとミルクの黄金比。少し大人びた性格をしている。',
+    classification: '飲料系',
+    baseStats: { hp: 60, attack: 55, defense: 55, speed: 65, intelligence: 70, charm: 60 },
+    favoriteFood: 'グラニュー糖',
+    spawnAreas: []
+  },
+  33: {
+    no: 33,
+    name: 'エスプレッソ',
+    type: '水',
+    description: '極限まで濃縮された苦味。眠気を一瞬で吹き飛ばす。',
+    classification: '飲料系',
+    baseStats: { hp: 80, attack: 75, defense: 80, speed: 85, intelligence: 90, charm: 50 },
+    favoriteFood: 'グラニュー糖',
+    spawnAreas: []
+  },
+  34: {
+    no: 34,
+    name: 'プリン',
+    type: 'ノーマル',
+    description: 'ぷるぷると揺れる黄色いお菓子。カラメルソースの帽子がお気に入り。',
+    classification: '洋菓子',
+    baseStats: { hp: 50, attack: 35, defense: 45, speed: 40, intelligence: 45, charm: 80 },
+    favoriteFood: 'ラムネボトル',
+    spawnAreas: ['SHOPPING_STREET', 'MARKET']
+  },
+  35: {
+    no: 35,
+    name: 'ババロア',
+    type: 'ノーマル',
+    description: '滑らかな口溶けを持つ。プリンよりも少し上品に振る舞う。',
+    classification: '洋菓子',
+    baseStats: { hp: 70, attack: 50, defense: 60, speed: 55, intelligence: 60, charm: 75 },
+    favoriteFood: 'ラムネボトル',
+    spawnAreas: []
+  },
+  36: {
+    no: 36,
+    name: 'パンナコッタ',
+    type: 'ノーマル',
+    description: '純白の美しいボディ。スプーンで叩かれるととても喜ぶ。',
+    classification: '洋菓子',
+    baseStats: { hp: 90, attack: 70, defense: 75, speed: 70, intelligence: 80, charm: 85 },
+    favoriteFood: 'ラムネボトル',
+    spawnAreas: []
+  },
+  37: {
+    no: 37,
+    name: 'ポテト',
+    type: '地面',
+    description: '土の中でじっと育った芋。形は不揃いだが中身はホクホク。',
+    classification: '根菜類',
+    baseStats: { hp: 55, attack: 45, defense: 50, speed: 30, intelligence: 35, charm: 50 },
+    favoriteFood: 'ジャガイモ',
+    spawnAreas: ['MOUNTAIN']
+  },
+  38: {
+    no: 38,
+    name: 'コロッケ',
+    type: '地面',
+    description: 'サクサクのパン粉をまとった。ソースをかけるとテンションが上がる。',
+    classification: '惣菜',
+    baseStats: { hp: 75, attack: 65, defense: 70, speed: 45, intelligence: 45, charm: 55 },
+    favoriteFood: 'ソース',
+    spawnAreas: []
+  },
+  39: {
+    no: 39,
+    name: 'ハッシュドポテト',
+    type: '地面',
+    description: '細切れにされたポテトが団結した姿。抜群の団結力とサクサク感を誇る。',
+    classification: 'ファストフード',
+    baseStats: { hp: 95, attack: 85, defense: 90, speed: 65, intelligence: 55, charm: 60 },
+    favoriteFood: 'ケチャップ',
+    spawnAreas: []
+  },
+  40: {
+    no: 40,
+    name: 'ネギ',
+    type: '草',
+    description: '細長く真っ直ぐなパチモン。タマネギマキとはネギ類仲間。',
+    classification: 'ネギ属',
+    baseStats: { hp: 40, attack: 45, defense: 35, speed: 55, intelligence: 40, charm: 60 },
+    favoriteFood: '新鮮キャベツ',
+    spawnAreas: ['FOREST']
+  },
+  41: {
+    no: 41,
+    name: 'タマネギ',
+    type: '草',
+    description: '何層もの皮で身を守る。剥いても剥いても中身は同じ。',
+    classification: 'ネギ属',
+    baseStats: { hp: 60, attack: 60, defense: 55, speed: 70, intelligence: 50, charm: 55 },
+    favoriteFood: '新鮮キャベツ',
+    spawnAreas: []
+  },
+  42: {
+    no: 42,
+    name: 'ニンニク',
+    type: '草',
+    description: '強烈な臭いを放ち、周囲のパチモンを退散させる。スタミナ抜群。',
+    classification: 'ネギ属',
+    baseStats: { hp: 80, attack: 85, defense: 75, speed: 85, intelligence: 60, charm: 40 },
+    favoriteFood: '新鮮キャベツ',
+    spawnAreas: []
+  },
+  43: {
+    no: 43,
+    name: 'マメ',
+    type: '草',
+    description: '丸くて小さなサヤに入った豆。転がりながら移動する。',
+    classification: 'マメ科',
+    baseStats: { hp: 35, attack: 40, defense: 45, speed: 50, intelligence: 35, charm: 65 },
+    favoriteFood: '新鮮キャベツ',
+    spawnAreas: ['FOREST']
+  },
+  44: {
+    no: 44,
+    name: 'エダマメ',
+    type: '草',
+    description: '塩茹でにされると一番美味しい状態になる。おつまみに最適。',
+    classification: 'マメ科',
+    baseStats: { hp: 55, attack: 55, defense: 65, speed: 60, intelligence: 50, charm: 60 },
+    favoriteFood: '新鮮キャベツ',
+    spawnAreas: []
+  },
+  45: {
+    no: 45,
+    name: 'ソラマメ',
+    type: '草',
+    description: '大きなサヤで優雅に眠る。重厚感のある豆パチモン。',
+    classification: 'マメ科',
+    baseStats: { hp: 75, attack: 75, defense: 85, speed: 70, intelligence: 65, charm: 55 },
+    favoriteFood: '新鮮キャベツ',
+    spawnAreas: []
+  },
+  46: {
+    no: 46,
+    name: 'チビドラ',
+    type: 'ドラゴン',
+    description: 'まだ飛べない小さな竜の子。口から小さな火の粉を吐く練習中。',
+    classification: '竜族',
+    baseStats: { hp: 50, attack: 60, defense: 45, speed: 50, intelligence: 45, charm: 55 },
+    favoriteFood: 'トカゲのエサ',
+    spawnAreas: ['MOUNTAIN']
+  },
+  47: {
+    no: 47,
+    name: 'ワイバーン',
+    type: 'ドラゴン',
+    description: '大きな翼を手に入れ、空を自由に飛び回る。風を起こして攻撃する。',
+    classification: '竜族',
+    baseStats: { hp: 70, attack: 80, defense: 60, speed: 75, intelligence: 55, charm: 50 },
+    favoriteFood: 'トカゲのエサ',
+    spawnAreas: []
+  },
+  48: {
+    no: 48,
+    name: 'カイザードラゴン',
+    type: 'ドラゴン',
+    description: '竜の皇帝。圧倒的な風格と火力を誇る最強の一角。',
+    classification: '竜族',
+    baseStats: { hp: 95, attack: 105, defense: 85, speed: 90, intelligence: 75, charm: 65 },
+    favoriteFood: '高級ミート',
+    spawnAreas: []
+  },
+  49: {
+    no: 49,
+    name: 'ピクセル',
+    type: '電気',
+    description: '1マスのドットで構成された最小の情報単位。チカチカ光る。',
+    classification: 'データ',
+    baseStats: { hp: 40, attack: 50, defense: 35, speed: 75, intelligence: 60, charm: 50 },
+    favoriteFood: 'エラーログ',
+    spawnAreas: ['ABANDONED_FACTORY', 'CYBER_SPACE']
+  },
+  50: {
+    no: 50,
+    name: 'ボクセル',
+    type: '電気',
+    description: '3次元の立体ドットに成長した。ブロックのような頑丈さを持つ。',
+    classification: 'データ',
+    baseStats: { hp: 60, attack: 65, defense: 55, speed: 85, intelligence: 70, charm: 45 },
+    favoriteFood: 'エラーログ',
+    spawnAreas: []
+  },
+  51: {
+    no: 51,
+    name: 'ポリゴンロン',
+    type: '電気',
+    description: '無数の多角形で構成された精巧なデジタルドラゴン。バグに強い。',
+    classification: 'データ',
+    baseStats: { hp: 80, attack: 85, defense: 75, speed: 95, intelligence: 85, charm: 40 },
+    favoriteFood: 'エラーログ',
+    spawnAreas: []
+  },
+  52: {
+    no: 52,
+    name: 'アミバ',
+    type: 'エスパー',
+    description: '姿を自由に変えるアメーバのようなパチモン。考えが掴めない。',
+    classification: '単細胞',
+    baseStats: { hp: 45, attack: 40, defense: 40, speed: 60, intelligence: 70, charm: 35 },
+    favoriteFood: 'エラーログ',
+    spawnAreas: ['CYBER_SPACE']
+  },
+  53: {
+    no: 53,
+    name: 'ゾウリムシ',
+    type: 'エスパー',
+    description: 'ゾウリの形をした微小パチモン。水面を高速で滑るように移動する。',
+    classification: '繊毛虫',
+    baseStats: { hp: 65, attack: 55, defense: 55, speed: 75, intelligence: 80, charm: 30 },
+    favoriteFood: 'ラムネボトル',
+    spawnAreas: []
+  },
+  54: {
+    no: 54,
+    name: 'ミカヅキモ',
+    type: 'エスパー',
+    description: '美しい三日月の形をした。夜空の光を吸収して念力を放つ。',
+    classification: '藻類',
+    baseStats: { hp: 85, attack: 75, defense: 70, speed: 85, intelligence: 95, charm: 40 },
+    favoriteFood: 'お茶',
+    spawnAreas: []
+  },
+  55: {
+    no: 55,
+    name: 'チビカネ',
+    type: '悪',
+    description: 'コインを1枚だけ握りしめた小鬼型パチモン。物陰から財布を狙う。',
+    classification: '守銭奴',
+    baseStats: { hp: 40, attack: 55, defense: 40, speed: 65, intelligence: 50, charm: 40 },
+    favoriteFood: 'お札',
+    spawnAreas: ['UNDERGROUND', 'MARKET']
+  },
+  56: {
+    no: 56,
+    name: 'カネゴン',
+    type: '悪',
+    description: '常にコインを食べ続けないと餓死してしまう悲しい怪物。',
+    classification: '守銭奴',
+    baseStats: { hp: 60, attack: 70, defense: 60, speed: 75, intelligence: 60, charm: 35 },
+    favoriteFood: 'コイン',
+    spawnAreas: []
+  },
+  57: {
+    no: 57,
+    name: 'ゴールドラッシュ',
+    type: '悪',
+    description: '全身が黄金でできた巨大なパチモン。歩くたびに金貨の音が響く。',
+    classification: '守銭奴',
+    baseStats: { hp: 80, attack: 90, defense: 80, speed: 85, intelligence: 70, charm: 30 },
+    favoriteFood: 'ゴールドバー',
+    spawnAreas: []
+  },
+  58: {
+    no: 58,
+    name: 'ショボネコ',
+    type: 'ノーマル',
+    description: 'しょぼんとした顔をした白猫パチモン。見ていると守りたくなる。',
+    classification: 'ネコ科',
+    baseStats: { hp: 45, attack: 35, defense: 35, speed: 50, intelligence: 45, charm: 80 },
+    favoriteFood: 'ネコ缶',
+    spawnAreas: ['SHOPPING_STREET']
+  },
+  59: {
+    no: 59,
+    name: 'デブネコ',
+    type: 'ノーマル',
+    description: 'たくさん食べて太ってしまった。お腹の上は非常に寝心地が良い。',
+    classification: 'ネコ科',
+    baseStats: { hp: 75, attack: 55, defense: 55, speed: 40, intelligence: 55, charm: 85 },
+    favoriteFood: 'ネコ缶',
+    spawnAreas: []
+  },
+  60: {
+    no: 60,
+    name: 'ライオンモドキ',
+    type: 'ノーマル',
+    description: '立派なたてがみを身につけた。百獣の王を気取っているが鳴き声は「にゃー」。',
+    classification: 'ネコ科',
+    baseStats: { hp: 95, attack: 85, defense: 75, speed: 70, intelligence: 70, charm: 90 },
+    favoriteFood: '高級ミート',
+    spawnAreas: []
+  },
 };
 
 export const EVOLUTIONS = {
@@ -480,5 +780,53 @@ export const EVOLUTIONS = {
   12: { level: 30, targetNo: 26 }, // ひろし -> フグサシ
 
   3: { level: 15, targetNo: 10 },  // たかし -> オワタロウ
-  10: { level: 30, targetNo: 25 }  // オワタロウ -> まさる
+  10: { level: 30, targetNo: 25 }, // オワタロウ -> まさる
+
+  4: { level: 15, targetNo: 19 },  // テグミジジイ -> ナンシー
+  19: { level: 30, targetNo: 21 }, // ナンシー -> ぬるぽ
+
+  11: { level: 15, targetNo: 20 }, // つよし -> ちえこ
+  20: { level: 30, targetNo: 30 }, // ちえこ -> よしこ
+
+  7: { level: 15, targetNo: 6 },   // コボルドモドキ -> クローナー
+  6: { level: 30, targetNo: 15 },  // クローナー -> えみ
+
+  16: { level: 15, targetNo: 23 }, // けんじ -> たえこ
+  23: { level: 30, targetNo: 18 }, // たえこ -> ゆうた
+
+  9: { level: 15, targetNo: 13 },  // さとる -> タピオカブラック
+  13: { level: 30, targetNo: 17 }, // タピオカブラック -> のりこ
+
+  27: { level: 15, targetNo: 28 }, // あきお -> サンタモドキ
+  28: { level: 30, targetNo: 24 }, // サンタモドキ -> ニセドラ
+
+  31: { level: 15, targetNo: 32 }, // ココア -> カフェオレ
+  32: { level: 30, targetNo: 33 }, // カフェオレ -> エスプレッソ
+
+  34: { level: 15, targetNo: 35 }, // プリン -> ババロア
+  35: { level: 30, targetNo: 36 }, // ババロア -> パンナコッタ
+
+  37: { level: 15, targetNo: 38 }, // ポテト -> コロッケ
+  38: { level: 30, targetNo: 39 }, // コロッケ -> ハッシュドポテト
+
+  40: { level: 15, targetNo: 41 }, // ネギ -> タマネギ
+  41: { level: 30, targetNo: 42 }, // タマネギ -> ニンニク
+
+  43: { level: 15, targetNo: 44 }, // マメ -> エダマメ
+  44: { level: 30, targetNo: 45 }, // エダマメ -> ソラマメ
+
+  46: { level: 15, targetNo: 47 }, // チビドラ -> ワイバーン
+  47: { level: 30, targetNo: 48 }, // ワイバーン -> カイザードラゴン
+
+  49: { level: 15, targetNo: 50 }, // ピクセル -> ボクセル
+  50: { level: 30, targetNo: 51 }, // ボクセル -> ポリゴンロン
+
+  52: { level: 15, targetNo: 53 }, // アミバ -> ゾウリムシ
+  53: { level: 30, targetNo: 54 }, // ゾウリムシ -> ミカヅキモ
+
+  55: { level: 15, targetNo: 56 }, // チビカネ -> カネゴン
+  56: { level: 30, targetNo: 57 }, // カネゴン -> ゴールドラッシュ
+
+  58: { level: 15, targetNo: 59 }, // ショボネコ -> デブネコ
+  59: { level: 30, targetNo: 60 }  // デブネコ -> ライオンモドキ
 };

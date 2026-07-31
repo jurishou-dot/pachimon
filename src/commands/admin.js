@@ -33,7 +33,7 @@ export const data = new SlashCommandBuilder()
   .addSubcommand(sub => sub
     .setName('spawn')
     .setDescription('任意のパチモンを指定レベルで手持ち/ボックスに直接追加します')
-    .addIntegerOption(opt => opt.setName('monster_no').setDescription('図鑑番号 (1-30)').setRequired(true))
+    .addIntegerOption(opt => opt.setName('monster_no').setDescription('図鑑番号 (1-60)').setRequired(true))
     .addIntegerOption(opt => opt.setName('level').setDescription('レベル (1-100)').setRequired(false))
   )
   .addSubcommand(sub => sub
@@ -94,7 +94,7 @@ export async function execute(interaction) {
     const template = MONSTERS[monsterNo];
     if (!template) {
       return interaction.reply({
-        content: `指定された図鑑番号 No.${monsterNo} は存在しません。(1〜30の間で指定してください)`,
+        content: `指定された図鑑番号 No.${monsterNo} は存在しません。(1〜60の間で指定してください)`,
         ephemeral: true
       });
     }

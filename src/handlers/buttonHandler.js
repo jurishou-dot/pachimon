@@ -154,17 +154,20 @@ export async function handleButton(interaction) {
     });
   }
 
-  if (customId === 'menu_zukan' || customId === 'zukan_page_1' || customId === 'zukan_page_2') {
+  if (customId === 'menu_zukan' || customId.startsWith('zukan_page_')) {
     // Show Encyclopedia List
     await interaction.deferUpdate();
     const zukan = getEncyclopedia(userId);
-    const totalSpecies = 30;
+    const totalSpecies = 60;
     const protectedCount = Object.keys(zukan).filter(no => zukan[no] === 'PROTECTED').length;
     const seenCount = Object.keys(zukan).length;
 
-    const page = customId === 'zukan_page_2' ? 2 : 1;
-    const startNo = page === 1 ? 1 : 16;
-    const endNo = page === 1 ? 15 : 30;
+    let page = 1;
+    if (customId.startsWith('zukan_page_')) {
+      page = parseInt(customId.split('_')[2]);
+    }
+    const startNo = (page - 1) * 15 + 1;
+    const endNo = page * 15;
 
     const embed = new EmbedBuilder()
       .setTitle('📖 パチモン大図鑑')
@@ -207,22 +210,26 @@ export async function handleButton(interaction) {
 
     const selectRow = new ActionRowBuilder().addComponents(selectMenu);
 
-    const navRow = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId('zukan_page_1')
-        .setLabel('No.001〜015')
-        .setStyle(page === 1 ? ButtonStyle.Primary : ButtonStyle.Secondary)
-        .setDisabled(page === 1),
-      new ButtonBuilder()
-        .setCustomId('zukan_page_2')
-        .setLabel('No.016〜030')
-        .setStyle(page === 2 ? ButtonStyle.Primary : ButtonStyle.Secondary)
-        .setDisabled(page === 2),
+    const navButtons = [];
+    for (let p = 1; p <= 4; p++) {
+      const pStart = (p - 1) * 15 + 1;
+      const pEnd = p * 15;
+      navButtons.push(
+        new ButtonBuilder()
+          .setCustomId(`zukan_page_${p}`)
+          .setLabel(`No.${String(pStart).padStart(3, '0')}〜${String(pEnd).padStart(3, '0')}`)
+          .setStyle(page === p ? ButtonStyle.Primary : ButtonStyle.Secondary)
+          .setDisabled(page === p)
+      );
+    }
+    navButtons.push(
       new ButtonBuilder()
         .setCustomId('menu_mypage')
         .setLabel('戻る')
         .setStyle(ButtonStyle.Danger)
     );
+
+    const navRow = new ActionRowBuilder().addComponents(navButtons);
 
     return interaction.editReply({
       embeds: [embed],

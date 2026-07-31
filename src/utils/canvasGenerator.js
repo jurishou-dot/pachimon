@@ -672,7 +672,7 @@ export async function generateProfileCard(player, rankName, party, zukanCount) {
   ctx.fillText('図鑑完成数:', 45, 215);
   ctx.fillStyle = '#FFFFFF';
   ctx.font = 'bold 20px "Segoe UI", Arial, sans-serif';
-  ctx.fillText(`${zukanCount} / 30 種`, 45, 240);
+  ctx.fillText(`${zukanCount} / 60 種`, 45, 240);
 
   ctx.fillStyle = '#B2DFDB';
   ctx.font = '16px "Segoe UI", Arial, sans-serif';
