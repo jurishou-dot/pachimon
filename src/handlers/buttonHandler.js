@@ -595,7 +595,9 @@ export async function handleButton(interaction) {
 
   if (customId === 'menu_missions') {
     // Show Missions
-    await interaction.deferUpdate();
+    if (!interaction.deferred && !interaction.replied) {
+      await interaction.deferUpdate();
+    }
     const missions = getMissions(userId);
 
     const embed = new EmbedBuilder()
@@ -671,6 +673,7 @@ export async function handleButton(interaction) {
 
   // Claim Mission reward
   if (customId.startsWith('mission_claim_')) {
+    await interaction.deferUpdate();
     const missionId = parseInt(customId.split('_')[2]);
     const rewards = claimMissionReward(userId, missionId);
 
