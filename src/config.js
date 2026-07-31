@@ -770,63 +770,63 @@ export const MONSTERS = {
 };
 
 export const EVOLUTIONS = {
-  1: { level: 16, targetNo: 22 },  // タマネギマキ -> しげる
-  22: { level: 32, targetNo: 29 }, // しげる -> クマネコ
+  1: { level: 10, targetNo: 22 },  // タマネギマキ -> しげる
+  22: { level: 10, targetNo: 29 }, // しげる -> クマネコ
 
-  2: { level: 15, targetNo: 8 },   // コンセントラ -> じゅんいち
-  8: { level: 30, targetNo: 14 },  // じゅんいち -> のりお
+  2: { level: 10, targetNo: 8 },   // コンセントラ -> じゅんいち
+  8: { level: 10, targetNo: 14 },  // じゅんいち -> のりお
 
-  5: { level: 15, targetNo: 12 },  // ミズモチ -> ひろし
-  12: { level: 30, targetNo: 26 }, // ひろし -> フグサシ
+  5: { level: 10, targetNo: 12 },  // ミズモチ -> ひろし
+  12: { level: 10, targetNo: 26 }, // ひろし -> フグサシ
 
-  3: { level: 15, targetNo: 10 },  // たかし -> オワタロウ
-  10: { level: 30, targetNo: 25 }, // オワタロウ -> まさる
+  3: { level: 10, targetNo: 10 },  // たかし -> オワタロウ
+  10: { level: 10, targetNo: 25 }, // オワタロウ -> まさる
 
-  4: { level: 15, targetNo: 19 },  // テグミジジイ -> ナンシー
-  19: { level: 30, targetNo: 21 }, // ナンシー -> ぬるぽ
+  4: { level: 10, targetNo: 19 },  // テグミジジイ -> ナンシー
+  19: { level: 10, targetNo: 21 }, // ナンシー -> ぬるぽ
 
-  11: { level: 15, targetNo: 20 }, // つよし -> ちえこ
-  20: { level: 30, targetNo: 30 }, // ちえこ -> よしこ
+  11: { level: 10, targetNo: 20 }, // つよし -> ちえこ
+  20: { level: 10, targetNo: 30 }, // ちえこ -> よしこ
 
-  7: { level: 15, targetNo: 6 },   // コボルドモドキ -> クローナー
-  6: { level: 30, targetNo: 15 },  // クローナー -> えみ
+  7: { level: 10, targetNo: 6 },   // コボルドモドキ -> クローナー
+  6: { level: 10, targetNo: 15 },  // クローナー -> えみ
 
-  16: { level: 15, targetNo: 23 }, // けんじ -> たえこ
-  23: { level: 30, targetNo: 18 }, // たえこ -> ゆうた
+  16: { level: 10, targetNo: 23 }, // けんじ -> たえこ
+  23: { level: 10, targetNo: 18 }, // たえこ -> ゆうた
 
-  9: { level: 15, targetNo: 13 },  // さとる -> タピオカブラック
-  13: { level: 30, targetNo: 17 }, // タピオカブラック -> のりこ
+  9: { level: 10, targetNo: 13 },  // さとる -> タピオカブラック
+  13: { level: 10, targetNo: 17 }, // タピオカブラック -> のりこ
 
-  27: { level: 15, targetNo: 28 }, // あきお -> サンタモドキ
-  28: { level: 30, targetNo: 24 }, // サンタモドキ -> ニセドラ
+  27: { level: 10, targetNo: 28 }, // あきお -> サンタモドキ
+  28: { level: 10, targetNo: 24 }, // サンタモドキ -> ニセドラ
 
-  31: { level: 15, targetNo: 32 }, // ココア -> カフェオレ
-  32: { level: 30, targetNo: 33 }, // カフェオレ -> エスプレッソ
+  31: { level: 10, targetNo: 32 }, // ココア -> カフェオレ
+  32: { level: 10, targetNo: 33 }, // カフェオレ -> エスプレッソ
 
-  34: { level: 15, targetNo: 35 }, // プリン -> ババロア
-  35: { level: 30, targetNo: 36 }, // ババロア -> パンナコッタ
+  34: { level: 10, targetNo: 35 }, // プリン -> ババロア
+  35: { level: 10, targetNo: 36 }, // ババロア -> パンナコッタ
 
-  37: { level: 15, targetNo: 38 }, // ポテト -> コロッケ
-  38: { level: 30, targetNo: 39 }, // コロッケ -> ハッシュドポテト
+  37: { level: 10, targetNo: 38 }, // ポテト -> コロッケ
+  38: { level: 10, targetNo: 39 }, // コロッケ -> ハッシュドポテト
 
-  40: { level: 15, targetNo: 41 }, // ネギ -> タマネギ
-  41: { level: 30, targetNo: 42 }, // タマネギ -> ニンニク
+  40: { level: 10, targetNo: 41 }, // ネギ -> タマネギ
+  41: { level: 10, targetNo: 42 }, // タマネギ -> ニンニク
 
-  43: { level: 15, targetNo: 44 }, // マメ -> エダマメ
-  44: { level: 30, targetNo: 45 }, // エダマメ -> ソラマメ
+  43: { level: 10, targetNo: 44 }, // マメ -> エダマメ
+  44: { level: 10, targetNo: 45 }, // エダマメ -> ソラマメ
 
-  46: { level: 15, targetNo: 47 }, // チビドラ -> ワイバーン
-  47: { level: 30, targetNo: 48 }, // ワイバーン -> カイザードラゴン
+  46: { level: 10, targetNo: 47 }, // チビドラ -> ワイバーン
+  47: { level: 10, targetNo: 48 }, // ワイバーン -> カイザードラゴン
 
-  49: { level: 15, targetNo: 50 }, // ピクセル -> ボクセル
-  50: { level: 30, targetNo: 51 }, // ボクセル -> ポリゴンロン
+  49: { level: 10, targetNo: 50 }, // ピクセル -> ボクセル
+  50: { level: 10, targetNo: 51 }, // ボクセル -> ポリゴンロン
 
-  52: { level: 15, targetNo: 53 }, // アミバ -> ゾウリムシ
-  53: { level: 30, targetNo: 54 }, // ゾウリムシ -> ミカヅキモ
+  52: { level: 10, targetNo: 53 }, // アミバ -> ゾウリムシ
+  53: { level: 10, targetNo: 54 }, // ゾウリムシ -> ミカヅキモ
 
-  55: { level: 15, targetNo: 56 }, // チビカネ -> カネゴン
-  56: { level: 30, targetNo: 57 }, // カネゴン -> ゴールドラッシュ
+  55: { level: 10, targetNo: 56 }, // チビカネ -> カネゴン
+  56: { level: 10, targetNo: 57 }, // カネゴン -> ゴールドラッシュ
 
-  58: { level: 15, targetNo: 59 }, // ショボネコ -> デブネコ
-  59: { level: 30, targetNo: 60 }  // デブネコ -> ライオンモドキ
+  58: { level: 10, targetNo: 59 }, // ショボネコ -> デブネコ
+  59: { level: 10, targetNo: 60 }  // デブネコ -> ライオンモドキ
 };
