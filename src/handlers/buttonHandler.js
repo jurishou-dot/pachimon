@@ -1250,8 +1250,6 @@ export async function handleButton(interaction) {
 
     const row = new ActionRowBuilder().addComponents(buttons);
 
-    const row = new ActionRowBuilder().addComponents(buttons);
-
     return interaction.editReply({
       embeds: [embed],
       files: [],
