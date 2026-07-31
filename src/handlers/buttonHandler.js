@@ -887,19 +887,37 @@ export async function handleButton(interaction) {
     }
   }
 
-  if (customId === 'explore_leave' || customId === 'encounter_escape') {
-    // Escape or leave area back to menu
-    
-    // Clear active encounter
+  if (customId === 'explore_leave') {
+    // Leave area back to menu
     db.prepare("DELETE FROM settings WHERE player_id = ? AND setting_key = 'active_encounter'").run(userId);
-    
-    // Update player state to IDLE
     savePlayer(userId, { current_state: 'IDLE', current_area: null });
 
-    // Open main page
     const wrappedInteraction = Object.create(interaction);
     wrappedInteraction.customId = 'menu_mypage';
     return handleButton(wrappedInteraction);
+  }
+
+  if (customId === 'encounter_escape') {
+    // Escape from encounter, stay in the area!
+    await interaction.deferUpdate();
+    db.prepare("DELETE FROM settings WHERE player_id = ? AND setting_key = 'active_encounter'").run(userId);
+    savePlayer(userId, { current_state: 'IDLE' });
+
+    const embed = new EmbedBuilder()
+      .setTitle('🏃 逃走成功')
+      .setDescription('パチモンから無事に逃げ出しました！')
+      .setColor('#78909C');
+
+    const row = new ActionRowBuilder().addComponents(
+      new ButtonBuilder().setCustomId('explore_proceed').setLabel('👣 調査を続ける').setStyle(ButtonStyle.Success),
+      new ButtonBuilder().setCustomId('explore_leave').setLabel('🏠 本部に戻る').setStyle(ButtonStyle.Danger)
+    );
+
+    return interaction.editReply({
+      embeds: [embed],
+      files: [],
+      components: [row]
+    });
   }
 
   // ----------------------------------------------------

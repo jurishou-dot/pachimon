@@ -209,8 +209,8 @@ export async function handleSelect(interaction) {
         .setColor('#4CAF50');
 
       const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId('menu_mypage').setLabel('本部に戻る').setStyle(ButtonStyle.Primary),
-        new ButtonBuilder().setCustomId('menu_investigate').setLabel('探索を続ける').setStyle(ButtonStyle.Success)
+        new ButtonBuilder().setCustomId(player.current_area ? 'explore_leave' : 'menu_mypage').setLabel('本部に戻る').setStyle(ButtonStyle.Primary),
+        new ButtonBuilder().setCustomId(player.current_area ? 'explore_proceed' : 'menu_investigate').setLabel('👣 調査を続ける').setStyle(ButtonStyle.Success)
       );
 
       return interaction.editReply({
@@ -243,8 +243,8 @@ export async function handleSelect(interaction) {
           .setColor('#78909C');
 
         const row = new ActionRowBuilder().addComponents(
-          new ButtonBuilder().setCustomId('menu_mypage').setLabel('本部に戻る').setStyle(ButtonStyle.Primary),
-          new ButtonBuilder().setCustomId('menu_investigate').setLabel('他の場所を調査').setStyle(ButtonStyle.Success)
+          new ButtonBuilder().setCustomId(player.current_area ? 'explore_leave' : 'menu_mypage').setLabel('本部に戻る').setStyle(ButtonStyle.Primary),
+          new ButtonBuilder().setCustomId(player.current_area ? 'explore_proceed' : 'menu_investigate').setLabel('👣 調査を続ける').setStyle(ButtonStyle.Success)
         );
 
         return interaction.editReply({
