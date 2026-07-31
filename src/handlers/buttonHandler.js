@@ -132,7 +132,7 @@ export async function handleButton(interaction) {
       .setColor('#00E5FF');
 
     const row1 = new ActionRowBuilder().addComponents(
-      new ButtonBuilder().setCustomId('menu_zukan').setLabel('📖 図鑑').setStyle(ButtonStyle.Primary),
+      new ButtonBuilder().setCustomId('menu_zukan').setLabel('📖 コーデックス').setStyle(ButtonStyle.Primary),
       new ButtonBuilder().setCustomId('menu_investigate').setLabel('🧭 調査').setStyle(ButtonStyle.Success),
       new ButtonBuilder().setCustomId('menu_party').setLabel('🎒 手持ち').setStyle(ButtonStyle.Secondary),
       new ButtonBuilder().setCustomId('menu_care').setLabel('🍖 お世話').setStyle(ButtonStyle.Secondary)
@@ -165,7 +165,7 @@ export async function handleButton(interaction) {
     const endNo = page === 1 ? 15 : 30;
 
     const embed = new EmbedBuilder()
-      .setTitle('📖 パチモン大図鑑')
+      .setTitle('📖 パチモン・コーデックス')
       .setDescription(
         `**調査完了率:** ${Math.floor((protectedCount / totalSpecies) * 100)}%\n` +
         `・保護した種類: \`${protectedCount} / ${totalSpecies}\` 種\n` +
@@ -679,7 +679,7 @@ export async function handleButton(interaction) {
       await interaction.followUp({
         content: `🎁 **依頼達成報酬を獲得！**\n` +
                  `・資金: +$${rewards.money}\n` +
-                 `・図鑑ポイント: +${rewards.points}P\n` +
+                 `・コーデックス調査P: +${rewards.points}P\n` +
                  `・アイテム: ${itemsText}`,
         ephemeral: true
       });

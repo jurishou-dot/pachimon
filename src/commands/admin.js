@@ -27,13 +27,13 @@ export const data = new SlashCommandBuilder()
   )
   .addSubcommand(sub => sub
     .setName('give_points')
-    .setDescription('図鑑調査ポイント（ランクポイント）を増減させます')
+    .setDescription('コーデックス調査ポイント（ランクポイント）を増減させます')
     .addIntegerOption(opt => opt.setName('amount').setDescription('ポイント数（マイナスも可）').setRequired(true))
   )
   .addSubcommand(sub => sub
     .setName('spawn')
     .setDescription('任意のパチモンを指定レベルで手持ち/ボックスに直接追加します')
-    .addIntegerOption(opt => opt.setName('monster_no').setDescription('図鑑番号 (1-30)').setRequired(true))
+    .addIntegerOption(opt => opt.setName('monster_no').setDescription('コーデックス番号 (1-30)').setRequired(true))
     .addIntegerOption(opt => opt.setName('level').setDescription('レベル (1-100)').setRequired(false))
   )
   .addSubcommand(sub => sub
@@ -94,7 +94,7 @@ export async function execute(interaction) {
     const template = MONSTERS[monsterNo];
     if (!template) {
       return interaction.reply({
-        content: `指定された図鑑番号 No.${monsterNo} は存在しません。(1〜30の間で指定してください)`,
+        content: `指定されたコーデックス番号 No.${monsterNo} は存在しません。(1〜30の間で指定してください)`,
         ephemeral: true
       });
     }
@@ -135,7 +135,7 @@ export async function execute(interaction) {
       db.prepare('DELETE FROM players WHERE id = ?').run(userId);
 
       return interaction.reply({
-        content: `💥 あなたのすべての調査データ（プレイヤー、所持パチモン、図鑑、インベントリ）を初期化しました。\`/start\` で再登録が可能です。`,
+        content: `💥 あなたのすべての調査データ（プレイヤー、所持パチモン、コーデックス、インベントリ）を初期化しました。\`/start\` で再登録が可能です。`,
         ephemeral: true
       });
     } catch (err) {

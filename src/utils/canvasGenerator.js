@@ -669,7 +669,7 @@ export async function generateProfileCard(player, rankName, party, zukanCount) {
 
   ctx.fillStyle = '#B2DFDB';
   ctx.font = '16px "Segoe UI", Arial, sans-serif';
-  ctx.fillText('図鑑完成数:', 45, 215);
+  ctx.fillText('コーデックス完成数:', 45, 215);
   ctx.fillStyle = '#FFFFFF';
   ctx.font = 'bold 20px "Segoe UI", Arial, sans-serif';
   ctx.fillText(`${zukanCount} / 30 種`, 45, 240);
@@ -877,7 +877,7 @@ export async function generateMonsterDetailCard(monsterTemplate, playerMonsterOb
     // Zukan generic mode: Display description
     ctx.fillStyle = '#B0BEC5';
     ctx.font = 'bold 15px "Segoe UI", Arial, sans-serif';
-    ctx.fillText('図鑑説明文', 280, 205);
+    ctx.fillText('コーデックス説明文', 280, 205);
 
     ctx.fillStyle = '#ECEFF1';
     ctx.font = '14px "Segoe UI", Arial, sans-serif';

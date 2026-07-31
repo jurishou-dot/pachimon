@@ -34,14 +34,14 @@ export async function execute(interaction) {
       .setTitle('🏠 パチモン調査隊 本部ダッシュボード')
       .setDescription(
         `新人調査員 **${player.username}**、今日の調査目標は決まったか？\n` +
-        `下のボタンから調査に行ったり、図鑑の確認やお世話ができるぞ！`
+        `下のボタンから調査に行ったり、コーデックスの確認やお世話ができるぞ！`
       )
       .setImage('attachment://profile_card.png')
       .setColor('#00E5FF')
       .setFooter({ text: 'パチモン調査隊本部 • ボタンをタップして選択' });
 
     const row1 = new ActionRowBuilder().addComponents(
-      new ButtonBuilder().setCustomId('menu_zukan').setLabel('📖 図鑑').setStyle(ButtonStyle.Primary),
+      new ButtonBuilder().setCustomId('menu_zukan').setLabel('📖 コーデックス').setStyle(ButtonStyle.Primary),
       new ButtonBuilder().setCustomId('menu_investigate').setLabel('🧭 調査').setStyle(ButtonStyle.Success),
       new ButtonBuilder().setCustomId('menu_party').setLabel('🎒 手持ち').setStyle(ButtonStyle.Secondary),
       new ButtonBuilder().setCustomId('menu_care').setLabel('🍖 お世話').setStyle(ButtonStyle.Secondary)
