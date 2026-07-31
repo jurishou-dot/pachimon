@@ -747,20 +747,21 @@ export async function handleButton(interaction) {
   if (customId === 'menu_shop') {
     // Show shop screen
     await interaction.deferUpdate();
+    const inventory = getInventory(userId);
 
     const embed = new EmbedBuilder()
       .setTitle('🪙 よろず屋（アイテムショップ）')
       .setDescription(
         `パチモン調査に役立つアイテムを販売しています。\n` +
         `現在の所持金: **$${player.money.toLocaleString()}**\n\n` +
-        `**【販売アイテム一覧】**\n` +
-        `📦 **標準保護ボックス** - $100\n` +
-        `🗃 **スーパー保護ボックス** - $300\n` +
-        `🔒 **特級保護ボックス** - $1000\n` +
-        `🍖 **パチモンフード** - $50 (お世話用エサ)\n` +
-        `🥬 **新鮮キャベツ** - $80 (草タイプ用エサ)\n` +
-        `🔋 **単三乾電池** - $80 (電気タイプ用エサ)\n` +
-        `🍢 **ねぎま（タレ）** - $100 (肉食系用エサ)`
+        `**【販売アイテム・所持数】**\n` +
+        `・📦 **標準保護ボックス** - $100 (所持: **${inventory.box_normal || 0}** 個)\n` +
+        `・🗃 **スーパー保護ボックス** - $300 (所持: **${inventory.box_super || 0}** 個)\n` +
+        `・🔒 **特級保護ボックス** - $1000 (所持: **${inventory.box_master || 0}** 個)\n` +
+        `・🍖 **パチモンフード** - $50 (所持: **${inventory.food_standard || 0}** 個)\n` +
+        `・🥬 **新鮮キャベツ** - $80 (所持: **${inventory.food_grass || 0}** 個)\n` +
+        `・🔋 **単三乾電池** - $80 (所持: **${inventory.food_electric || 0}** 個)\n` +
+        `・🍢 **ねぎま（タレ）** - $100 (所持: **${inventory.food_meat || 0}** 個)`
       )
       .setColor('#FFD700');
 
@@ -1021,8 +1022,12 @@ export async function handleButton(interaction) {
     const embed = new EmbedBuilder()
       .setTitle('🤝 保護の実行')
       .setDescription(
-        `保護ボックスを投げて、パチモンの保護を試みます。\n` +
-        `どれを使いますか？`
+        `保護ボックスを投げて、パチモンの保護を試みます。\n\n` +
+        `**【所持ボックス一覧】**\n` +
+        `・📦 標準保護ボックス: **${inventory.box_normal || 0}** 個 (倍率: 1.0x)\n` +
+        `・🗃 スーパー保護ボックス: **${inventory.box_super || 0}** 個 (倍率: 1.5x)\n` +
+        `・🔒 特級保護ボックス: **${inventory.box_master || 0}** 個 (倍率: 3.0x)\n\n` +
+        `使用する保護ボックスを下のセレクトメニューから選択してください。`
       )
       .setColor('#4CAF50');
 
