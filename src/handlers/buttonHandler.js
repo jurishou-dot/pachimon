@@ -999,16 +999,16 @@ export async function handleButton(interaction) {
 
     const inventory = getInventory(userId);
     const boxes = [
-      { id: 'box_normal', label: '標準保護ボックス 📦', rate: '1.0x' },
-      { id: 'box_super', label: 'スーパー保護ボックス 🗃', rate: '1.5x' },
-      { id: 'box_master', label: '特級保護ボックス 🔒', rate: '3.0x' }
+      { id: 'box_normal', name: '標準保護ボックス 📦', rate: '1.0x' },
+      { id: 'box_super', name: 'スーパー保護ボックス 🗃', rate: '1.5x' },
+      { id: 'box_master', name: '特級保護ボックス 🔒', rate: '3.0x' }
     ];
 
     const menuOptions = [];
     for (const b of boxes) {
       const owned = inventory[b.id] || 0;
       menuOptions.push({
-        label: `${b.label} (所持: ${owned}個)`,
+        label: `【${owned}個】${b.name} (${b.rate})`,
         value: `capture_use_${b.id}`,
         description: `保護倍率: ${b.rate} ${owned <= 0 ? '【在庫切れ】' : ''}`
       });
