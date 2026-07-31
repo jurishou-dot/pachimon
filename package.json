@@ -1,0 +1,17 @@
+{
+  "name": "pachimon-battle",
+  "version": "0.3.0",
+  "description": "Discord Bot for Pachimon Battle - Parody research and capture RPG",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node src/index.js",
+    "test": "node src/test_run.js"
+  },
+  "dependencies": {
+    "@napi-rs/canvas": "^0.1.53",
+    "discord.js": "^14.15.3",
+    "dotenv": "^16.4.5"
+  }
+}

@@ -1,0 +1,30 @@
+# Dependency directories
+node_modules/
+
+# Local environment files (contains secret tokens!)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# SQLite Database files
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+# Test generated images
+test_*.png
+test_*.jpg
+
+# Log files
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS metadata
+.DS_Store
+Thumbs.db
