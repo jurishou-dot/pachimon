@@ -14,6 +14,7 @@ import {
   generateProfileCard, generateEncounterCard, generateMonsterDetailCard 
 } from '../utils/canvasGenerator.js';
 import { db } from '../database.js';
+import { activeTrades, activePvPs } from '../utils/sessionManager.js';
 
 export async function handleButton(interaction) {
   const userId = interaction.user.id;
@@ -1249,10 +1250,320 @@ export async function handleButton(interaction) {
 
     const row = new ActionRowBuilder().addComponents(buttons);
 
+    const row = new ActionRowBuilder().addComponents(buttons);
+
     return interaction.editReply({
       embeds: [embed],
       files: [],
       components: [row]
+    });
+  }
+
+  // ----------------------------------------------------
+  // TRADE BUTTON HANDLERS
+  // ----------------------------------------------------
+  if (customId.startsWith('trade_confirm_a_') || customId.startsWith('trade_confirm_b_')) {
+    await interaction.deferUpdate();
+    const prefix = customId.startsWith('trade_confirm_a_') ? 'trade_confirm_a_' : 'trade_confirm_b_';
+    const sessionId = customId.substring(prefix.length);
+    const session = activeTrades.get(sessionId);
+
+    if (!session) {
+      return interaction.followUp({ content: '交換セッションが見つかりません。期限切れかキャンセルされた可能性があります。', ephemeral: true });
+    }
+
+    if (prefix === 'trade_confirm_a_') {
+      if (userId !== session.userA) {
+        return interaction.followUp({ content: 'この確定ボタンは提案者（User A）のみ押せます。', ephemeral: true });
+      }
+      session.confirmA = true;
+    } else {
+      if (userId !== session.userB) {
+        return interaction.followUp({ content: 'この確定ボタンは相手（User B）のみ押せます。', ephemeral: true });
+      }
+      session.confirmB = true;
+    }
+
+    const userAUser = await interaction.client.users.fetch(session.userA);
+    const userBUser = await interaction.client.users.fetch(session.userB);
+    const monsterA = db.prepare('SELECT * FROM monsters WHERE id = ?').get(session.monsterA);
+    const monsterB = db.prepare('SELECT * FROM monsters WHERE id = ?').get(session.monsterB);
+
+    if (session.confirmA && session.confirmB) {
+      // Execute the trade!
+      // Swap player_ids and set status to BOX
+      db.prepare("UPDATE monsters SET player_id = ?, status = 'BOX' WHERE id = ?").run(session.userB, session.monsterA);
+      db.prepare("UPDATE monsters SET player_id = ?, status = 'BOX' WHERE id = ?").run(session.userA, session.monsterB);
+
+      // Clean up session
+      activeTrades.delete(sessionId);
+
+      const embed = new EmbedBuilder()
+        .setTitle('🎉 交換成立！')
+        .setDescription(
+          `🤝 **${userAUser.username}** と **${userBUser.username}** のパチモン交換が成立しました！\n\n` +
+          `**【交換内容】**\n` +
+          `・**${userAUser.username}** へ: **${monsterB.nickname}** (Lv.${monsterB.level})\n` +
+          `・**${userBUser.username}** へ: **${monsterA.nickname}** (Lv.${monsterA.level})\n\n` +
+          `交換されたパチモンはそれぞれの**ボックス**に送られました。手持ちから編成して連れていくことができます。`
+        )
+        .setColor('#81C784');
+
+      return interaction.editReply({
+        embeds: [embed],
+        components: []
+      });
+    } else {
+      // Update confirmation status screen
+      const embed = new EmbedBuilder()
+        .setTitle('🤝 パチモン交換の最終確認')
+        .setDescription(
+          `以下のパチモン交換を確定しますか？\n` +
+          `お互いが「交換を確定する」ボタンを押すと、交換が完了します。\n\n` +
+          `**【交換内容】**\n` +
+          `・**${userAUser.username}** から提供: **${monsterA.nickname}** (Lv.${monsterA.level} / ${MONSTERS[monsterA.monster_no]?.name || '不明'})\n` +
+          `・**${userBUser.username}** から提供: **${monsterB.nickname}** (Lv.${monsterB.level} / ${MONSTERS[monsterB.monster_no]?.name || '不明'})\n\n` +
+          `現在の確定状況:\n` +
+          `・**${userAUser.username}**: ${session.confirmA ? '✅ 確定済み' : '⏳ 待機中'}\n` +
+          `・**${userBUser.username}**: ${session.confirmB ? '✅ 確定済み' : '⏳ 待機中'}`
+        )
+        .setColor('#4CAF50');
+
+      const buttonA = new ButtonBuilder()
+        .setCustomId(`trade_confirm_a_${sessionId}`)
+        .setLabel(`${userAUser.username} が確定`)
+        .setStyle(ButtonStyle.Success)
+        .setDisabled(session.confirmA);
+
+      const buttonB = new ButtonBuilder()
+        .setCustomId(`trade_confirm_b_${sessionId}`)
+        .setLabel(`${userBUser.username} が確定`)
+        .setStyle(ButtonStyle.Success)
+        .setDisabled(session.confirmB);
+
+      const cancelButton = new ButtonBuilder()
+        .setCustomId(`trade_cancel_${sessionId}`)
+        .setLabel('キャンセル')
+        .setStyle(ButtonStyle.Danger);
+
+      const row = new ActionRowBuilder().addComponents(buttonA, buttonB, cancelButton);
+
+      return interaction.editReply({
+        embeds: [embed],
+        components: [row]
+      });
+    }
+  }
+
+  if (customId.startsWith('trade_cancel_')) {
+    await interaction.deferUpdate();
+    const sessionId = customId.substring('trade_cancel_'.length);
+    activeTrades.delete(sessionId);
+
+    return interaction.editReply({
+      content: '❌ 交換申請はキャンセルされました。',
+      embeds: [],
+      components: []
+    });
+  }
+
+  // ----------------------------------------------------
+  // PVP BUTTON HANDLERS
+  // ----------------------------------------------------
+  if (customId.startsWith('pvp_decline_')) {
+    await interaction.deferUpdate();
+    const sessionId = customId.substring('pvp_decline_'.length);
+    const session = activePvPs.get(sessionId);
+
+    if (!session) {
+      return interaction.followUp({ content: '対戦セッションが見つかりません。期限切れか既に終了した可能性があります。', ephemeral: true });
+    }
+
+    if (userId !== session.userB) {
+      return interaction.followUp({ content: 'この操作は対戦を挑まれたプレイヤーのみ実行できます。', ephemeral: true });
+    }
+
+    activePvPs.delete(sessionId);
+
+    return interaction.editReply({
+      content: '🏃 対戦の挑戦は辞退されました。',
+      embeds: [],
+      components: []
+    });
+  }
+
+  if (customId.startsWith('pvp_accept_')) {
+    await interaction.deferUpdate();
+    const sessionId = customId.substring('pvp_accept_'.length);
+    const session = activePvPs.get(sessionId);
+
+    if (!session) {
+      return interaction.followUp({ content: '対戦セッションが見つかりません。期限切れか既に終了した可能性があります。', ephemeral: true });
+    }
+
+    if (userId !== session.userB) {
+      return interaction.followUp({ content: 'この操作は対戦を挑まれたプレイヤーのみ実行できます。', ephemeral: true });
+    }
+
+    // Get party details
+    const partyA = getPlayerParty(session.userA);
+    const partyB = getPlayerParty(session.userB);
+
+    if (partyA.length === 0 || partyB.length === 0) {
+      activePvPs.delete(sessionId);
+      return interaction.editReply({
+        content: '❌ どちらかのプレイヤーの手持ちパチモンがいないため、対戦を開始できませんでした。',
+        embeds: [],
+        components: []
+      });
+    }
+
+    const myMonsterA = partyA[0]; // Lead of User A
+    const myMonsterB = partyB[0]; // Lead of User B
+
+    // Simulate turn-based PvP Battle!
+    let hpA = myMonsterA.hp;
+    let hpB = myMonsterB.hp;
+    const combatLogs = [];
+
+    const userAUser = await interaction.client.users.fetch(session.userA);
+    const userBUser = await interaction.client.users.fetch(session.userB);
+
+    combatLogs.push(`⚔ **対戦（PvP）開始！**`);
+    combatLogs.push(`・**${userAUser.username}**: **${myMonsterA.nickname}** (Lv.${myMonsterA.level} / HP: ${hpA})`);
+    combatLogs.push(`・**${userBUser.username}**: **${myMonsterB.nickname}** (Lv.${myMonsterB.level} / HP: ${hpB})\n`);
+
+    let turn = 1;
+    // Determine order by speed
+    let first = myMonsterA.speed >= myMonsterB.speed ? 'A' : 'B';
+
+    while (hpA > 0 && hpB > 0 && turn <= 15) {
+      combatLogs.push(`**[ターン ${turn}]**`);
+      
+      if (first === 'A') {
+        // A attacks B
+        const dmg = Math.max(1, Math.floor((myMonsterA.attack * 0.5) - (myMonsterB.defense * 0.2) + Math.random() * 5));
+        hpB -= dmg;
+        combatLogs.push(`💥 **${myMonsterA.nickname}** の攻撃！ **${myMonsterB.nickname}** に \`${dmg}\` ダメージを与えた！ (残HP: ${Math.max(0, hpB)})`);
+        
+        if (hpB <= 0) break;
+
+        // B attacks A
+        const dmgB = Math.max(1, Math.floor((myMonsterB.attack * 0.5) - (myMonsterA.defense * 0.2) + Math.random() * 5));
+        hpA -= dmgB;
+        combatLogs.push(`💥 **${myMonsterB.nickname}** の攻撃！ **${myMonsterA.nickname}** に \`${dmgB}\` ダメージを与えた！ (残HP: ${Math.max(0, hpA)})`);
+      } else {
+        // B attacks A
+        const dmgB = Math.max(1, Math.floor((myMonsterB.attack * 0.5) - (myMonsterA.defense * 0.2) + Math.random() * 5));
+        hpA -= dmgB;
+        combatLogs.push(`💥 **${myMonsterB.nickname}** の攻撃！ **${myMonsterA.nickname}** に \`${dmgB}\` ダメージを与えた！ (残HP: ${Math.max(0, hpA)})`);
+        
+        if (hpA <= 0) break;
+
+        // A attacks B
+        const dmg = Math.max(1, Math.floor((myMonsterA.attack * 0.5) - (myMonsterB.defense * 0.2) + Math.random() * 5));
+        hpB -= dmg;
+        combatLogs.push(`💥 **${myMonsterA.nickname}** の攻撃！ **${myMonsterB.nickname}** に \`${dmg}\` ダメージを与えた！ (残HP: ${Math.max(0, hpB)})`);
+      }
+      
+      combatLogs.push('');
+      turn++;
+    }
+
+    let winner = null;
+    let winnerUserId = null;
+    let loserUserId = null;
+    let winnerMonsterName = '';
+    let winnerUsername = '';
+
+    if (hpA <= 0) {
+      winner = 'B';
+      winnerUserId = session.userB;
+      loserUserId = session.userA;
+      winnerMonsterName = myMonsterB.nickname;
+      winnerUsername = userBUser.username;
+      combatLogs.push(`\n🏆 **${userBUser.username} の勝利！**`);
+    } else if (hpB <= 0) {
+      winner = 'A';
+      winnerUserId = session.userA;
+      loserUserId = session.userB;
+      winnerMonsterName = myMonsterA.nickname;
+      winnerUsername = userAUser.username;
+      combatLogs.push(`\n🏆 **${userAUser.username} の勝利！**`);
+    } else {
+      combatLogs.push(`\n⏳ **引き分け！制限ターン数に達しました。**`);
+    }
+
+    // Award XP and rewards
+    let rewardMsg = '';
+    if (winner) {
+      // Winner reward: $100 and 50 points
+      const winnerPlayer = getPlayer(winnerUserId);
+      const loserPlayer = getPlayer(loserUserId);
+      savePlayer(winnerUserId, { money: winnerPlayer.money + 100, rank_points: winnerPlayer.rank_points + 50 });
+      savePlayer(loserUserId, { money: loserPlayer.money + 20 }); // Consolation prize
+
+      // Award XP to winner monster
+      const xpGained = 30 + Math.floor(myMonsterA.level * 2);
+      const winningMonster = winner === 'A' ? myMonsterA : myMonsterB;
+      
+      const getXPNeeded = (l) => Math.floor(50 * Math.pow(l, 1.4));
+      let newLvl = winningMonster.level;
+      let finalXP = winningMonster.exp + xpGained;
+      let leveledUp = false;
+
+      while (true) {
+        const needed = getXPNeeded(newLvl);
+        if (finalXP >= needed) {
+          finalXP -= needed;
+          newLvl += 1;
+          leveledUp = true;
+        } else {
+          break;
+        }
+      }
+
+      if (leveledUp) {
+        const newStats = calculateMonsterStats(winningMonster.monster_no, newLvl, winningMonster.personality);
+        db.prepare(`
+          UPDATE monsters SET 
+            level = ?, exp = ?, hp = ?, max_hp = ?,
+            attack = ?, defense = ?, speed = ?, intelligence = ?, charm = ?
+          WHERE id = ?
+        `).run(
+          newLvl, finalXP, newStats.hp, newStats.max_hp,
+          newStats.attack, newStats.defense, newStats.speed, newStats.intelligence, newStats.charm,
+          winningMonster.id
+        );
+        rewardMsg = `\n🌟 **${winningMonster.nickname}** は \`${xpGained}\` EXPを獲得！ **Lv.${winningMonster.level} ➡️ Lv.${newLvl}** に上がった！\n` +
+                    `🪙 **${winnerUsername}** は勝利報酬として **$100** & **50P** を獲得しました！\n` +
+                    `🪙 敗者にも参加賞として **$20** が贈られます。`;
+      } else {
+        db.prepare('UPDATE monsters SET exp = ? WHERE id = ?').run(finalXP, winningMonster.id);
+        rewardMsg = `\n🌟 **${winningMonster.nickname}** は \`${xpGained}\` EXPを獲得しました！\n` +
+                    `🪙 **${winnerUsername}** は勝利報酬として **$100** & **50P** を獲得しました！\n` +
+                    `🪙 敗者にも参加賞として **$20** が贈られます。`;
+      }
+    } else {
+      rewardMsg = `\n🪙 引き分けのため、双方に参加賞として **$20** が贈られます。`;
+      const playerA = getPlayer(session.userA);
+      const playerB = getPlayer(session.userB);
+      savePlayer(session.userA, { money: playerA.money + 20 });
+      savePlayer(session.userB, { money: playerB.money + 20 });
+    }
+
+    activePvPs.delete(sessionId);
+
+    const embed = new EmbedBuilder()
+      .setTitle('⚔ 対戦結果')
+      .setDescription(
+        combatLogs.join('\n') + `\n` + rewardMsg
+      )
+      .setColor('#FF5722');
+
+    return interaction.editReply({
+      embeds: [embed],
+      components: []
     });
   }
 }

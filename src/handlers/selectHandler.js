@@ -2,13 +2,15 @@ import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, AttachmentB
 import { 
   getPlayer, savePlayer, createMonster, 
   getEncyclopedia, getInventory, updateInventoryItem, 
-  updateMissionProgress, updateEncyclopedia, getPlayerParty 
+  updateMissionProgress, updateEncyclopedia, getPlayerParty,
+  getPlayerMonsters
 } from '../database.js';
 import { MONSTERS, AREAS, ITEMS, WEATHERS } from '../config.js';
 import { calculateCaptureChance, calculateMonsterStats } from '../utils/helpers.js';
 import { generateEncounterCard, generateMonsterDetailCard } from '../utils/canvasGenerator.js';
 import { db } from '../database.js';
 import { handleButton } from './buttonHandler.js';
+import { activeTrades } from '../utils/sessionManager.js';
 
 export async function handleSelect(interaction) {
   const userId = interaction.user.id;
@@ -390,6 +392,143 @@ export async function handleSelect(interaction) {
     return interaction.editReply({
       embeds: [embed],
       components: [selectRow, navRow]
+    });
+  }
+
+  // ----------------------------------------------------
+  // TRADE SELECT A HANDLER (User A selects their monster)
+  // ----------------------------------------------------
+  if (customId.startsWith('trade_select_a_')) {
+    await interaction.deferUpdate();
+    const sessionId = customId.substring('trade_select_a_'.length);
+    const session = activeTrades.get(sessionId);
+
+    if (!session) {
+      return interaction.followUp({ content: '交換セッションが見つかりません。期限切れかキャンセルされた可能性があります。', ephemeral: true });
+    }
+
+    if (interaction.user.id !== session.userA) {
+      return interaction.followUp({ content: 'この操作は提案者のみ実行できます。', ephemeral: true });
+    }
+
+    const monsterId = parseInt(selectedValue.split('_').slice(3).join('_')); // e.g. trade_val_a_12 -> 12
+    const monster = db.prepare('SELECT * FROM monsters WHERE id = ? AND player_id = ?').get(monsterId, session.userA);
+
+    if (!monster) {
+      return interaction.followUp({ content: '選択したパチモンが見つかりません。', ephemeral: true });
+    }
+
+    session.monsterA = monster.id;
+
+    // Get User B's monsters
+    const monstersB = getPlayerMonsters(session.userB);
+    const userBUser = await interaction.client.users.fetch(session.userB);
+
+    if (monstersB.length === 0) {
+      activeTrades.delete(sessionId);
+      return interaction.editReply({
+        content: `❌ **${userBUser.username}** さんは交換に出せるパチモンを1匹も持っていないため、交換を継続できません。`,
+        embeds: [],
+        components: []
+      });
+    }
+
+    const embed = new EmbedBuilder()
+      .setTitle('🤝 パチモン交換の申請')
+      .setDescription(
+        `**提案内容:**\n` +
+        `・**${interaction.user.username}**: **${monster.nickname}** (Lv.${monster.level}) を提示しました。\n\n` +
+        `次に、対戦相手である **${userBUser.username}** が、交換に出すパチモンを以下のセレクトメニューから選択してください。`
+      )
+      .setColor('#FF9800');
+
+    const selectMenu = new StringSelectMenuBuilder()
+      .setCustomId(`trade_select_b_${sessionId}`)
+      .setPlaceholder('交換に出す自分のパチモンを選択...')
+      .addOptions(
+        monstersB.slice(0, 25).map(m => ({
+          label: `${m.nickname} (Lv.${m.level})`,
+          value: `trade_val_b_${m.id}`,
+          description: `タイプ: ${MONSTERS[m.monster_no]?.type || '不明'} | 性格: ${m.personality}`
+        }))
+      );
+
+    const cancelButton = new ButtonBuilder()
+      .setCustomId(`trade_cancel_${sessionId}`)
+      .setLabel('キャンセル')
+      .setStyle(ButtonStyle.Danger);
+
+    const row1 = new ActionRowBuilder().addComponents(selectMenu);
+    const row2 = new ActionRowBuilder().addComponents(cancelButton);
+
+    return interaction.editReply({
+      embeds: [embed],
+      components: [row1, row2]
+    });
+  }
+
+  // ----------------------------------------------------
+  // TRADE SELECT B HANDLER (User B selects their monster)
+  // ----------------------------------------------------
+  if (customId.startsWith('trade_select_b_')) {
+    await interaction.deferUpdate();
+    const sessionId = customId.substring('trade_select_b_'.length);
+    const session = activeTrades.get(sessionId);
+
+    if (!session) {
+      return interaction.followUp({ content: '交換セッションが見つかりません。期限切れかキャンセルされた可能性があります。', ephemeral: true });
+    }
+
+    if (interaction.user.id !== session.userB) {
+      return interaction.followUp({ content: 'この操作は申請された相手のみ実行できます。', ephemeral: true });
+    }
+
+    const monsterId = parseInt(selectedValue.split('_').slice(3).join('_')); // e.g. trade_val_b_15 -> 15
+    const monster = db.prepare('SELECT * FROM monsters WHERE id = ? AND player_id = ?').get(monsterId, session.userB);
+
+    if (!monster) {
+      return interaction.followUp({ content: '選択したパチモンが見つかりません。', ephemeral: true });
+    }
+
+    session.monsterB = monster.id;
+
+    const userAUser = await interaction.client.users.fetch(session.userA);
+    const monsterA = db.prepare('SELECT * FROM monsters WHERE id = ?').get(session.monsterA);
+
+    const embed = new EmbedBuilder()
+      .setTitle('🤝 パチモン交換の最終確認')
+      .setDescription(
+        `以下のパチモン交換を確定しますか？\n` +
+        `お互いが「交換を確定する」ボタンを押すと、交換が完了します。\n\n` +
+        `**【交換内容】**\n` +
+        `・**${userAUser.username}** から提供: **${monsterA.nickname}** (Lv.${monsterA.level} / ${MONSTERS[monsterA.monster_no]?.name || '不明'})\n` +
+        `・**${interaction.user.username}** から提供: **${monster.nickname}** (Lv.${monster.level} / ${MONSTERS[monster.monster_no]?.name || '不明'})\n\n` +
+        `現在の確定状況:\n` +
+        `・**${userAUser.username}**: ${session.confirmA ? '✅ 確定済み' : '⏳ 待機中'}\n` +
+        `・**${interaction.user.username}**: ${session.confirmB ? '✅ 確定済み' : '⏳ 待機中'}`
+      )
+      .setColor('#4CAF50');
+
+    const buttonA = new ButtonBuilder()
+      .setCustomId(`trade_confirm_a_${sessionId}`)
+      .setLabel(`${userAUser.username} が確定`)
+      .setStyle(ButtonStyle.Success);
+
+    const buttonB = new ButtonBuilder()
+      .setCustomId(`trade_confirm_b_${sessionId}`)
+      .setLabel(`${interaction.user.username} が確定`)
+      .setStyle(ButtonStyle.Success);
+
+    const cancelButton = new ButtonBuilder()
+      .setCustomId(`trade_cancel_${sessionId}`)
+      .setLabel('キャンセル')
+      .setStyle(ButtonStyle.Danger);
+
+    const row = new ActionRowBuilder().addComponents(buttonA, buttonB, cancelButton);
+
+    return interaction.editReply({
+      embeds: [embed],
+      components: [row]
     });
   }
 }

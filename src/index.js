@@ -8,6 +8,8 @@ import * as menuCmd from './commands/menu.js';
 import * as profileCmd from './commands/profile.js';
 import * as helpCmd from './commands/help.js';
 import * as adminCmd from './commands/admin.js';
+import * as tradeCmd from './commands/trade.js';
+import * as pvpCmd from './commands/pvp.js';
 
 // Load interaction handlers
 import { handleButton } from './handlers/buttonHandler.js';
@@ -40,6 +42,8 @@ client.commands.set(menuCmd.data.name, menuCmd);
 client.commands.set(profileCmd.data.name, profileCmd);
 client.commands.set(helpCmd.data.name, helpCmd);
 client.commands.set(adminCmd.data.name, adminCmd);
+client.commands.set(tradeCmd.data.name, tradeCmd);
+client.commands.set(pvpCmd.data.name, pvpCmd);
 
 /**
  * Register Slash Commands with Discord API
