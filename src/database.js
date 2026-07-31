@@ -1,5 +1,7 @@
 import { DatabaseSync } from 'node:sqlite';
 import { join } from 'path';
+import { MONSTERS, EVOLUTIONS } from './config.js';
+import { calculateMonsterStats, getXPNeededForLevel } from './utils/helpers.js';
 
 // Resolve database path relative to project root
 const dbPath = join(process.cwd(), 'pachimon.db');
@@ -354,3 +356,92 @@ export function claimMissionReward(userId, missionId) {
     items
   };
 }
+
+export function addExperienceAndLevelUp(userId, monsterId, expGained) {
+  const monster = db.prepare('SELECT * FROM monsters WHERE id = ? AND player_id = ?').get(monsterId, userId);
+  if (!monster) return null;
+
+  const currentLvl = monster.level;
+  const currentXP = monster.exp;
+  let finalXP = currentXP + expGained;
+  let newLvl = currentLvl;
+  let leveledUp = false;
+
+  while (true) {
+    const needed = getXPNeededForLevel(newLvl);
+    if (finalXP >= needed) {
+      finalXP -= needed;
+      newLvl += 1;
+      leveledUp = true;
+    } else {
+      break;
+    }
+  }
+
+  let monsterNo = monster.monster_no;
+  let nickname = monster.nickname;
+  let evolved = false;
+  const oldName = MONSTERS[monsterNo]?.name || 'パチモン';
+  let newName = oldName;
+
+  while (true) {
+    const evo = EVOLUTIONS[monsterNo];
+    if (evo && newLvl >= evo.level) {
+      const prevTemplate = MONSTERS[monsterNo];
+      const nextTemplate = MONSTERS[evo.targetNo];
+      if (nextTemplate) {
+        if (nickname === prevTemplate.name) {
+          nickname = nextTemplate.name;
+        }
+        monsterNo = evo.targetNo;
+        newName = nextTemplate.name;
+        evolved = true;
+      } else {
+        break;
+      }
+    } else {
+      break;
+    }
+  }
+
+  let levelUpMsg = '';
+  let evolutionMsg = '';
+
+  if (leveledUp || evolved) {
+    const newStats = calculateMonsterStats(monsterNo, newLvl, monster.personality);
+    
+    db.prepare(`
+      UPDATE monsters SET 
+        monster_no = ?, nickname = ?, level = ?, exp = ?, hp = ?, max_hp = ?,
+        attack = ?, defense = ?, speed = ?, intelligence = ?, charm = ?
+      WHERE id = ?
+    `).run(
+      monsterNo, nickname, newLvl, finalXP, newStats.hp, newStats.max_hp,
+      newStats.attack, newStats.defense, newStats.speed, newStats.intelligence, newStats.charm,
+      monsterId
+    );
+
+    if (leveledUp) {
+      levelUpMsg = `\n🆙 **レベルアップ！** Lv.${currentLvl} ➡️ **Lv.${newLvl}** に上昇！ ステータスが強化されました。`;
+    }
+    if (evolved) {
+      evolutionMsg = `\n✨ **進化！** **${oldName}** は **${newName}** に進化した！`;
+      // Update Codex to PROTECTED
+      updateEncyclopedia(userId, monsterNo, 'PROTECTED');
+    }
+  } else {
+    db.prepare('UPDATE monsters SET exp = ? WHERE id = ?').run(finalXP, monsterId);
+  }
+
+  return {
+    leveledUp,
+    evolved,
+    oldLevel: currentLvl,
+    newLevel: newLvl,
+    oldName,
+    newName,
+    levelUpMsg,
+    evolutionMsg
+  };
+}
+

@@ -3,7 +3,8 @@ import {
   getPlayer, createPlayer, savePlayer, 
   createMonster, getPlayerParty, getEncyclopedia, 
   getInventory, updateInventoryItem, getMissions, 
-  claimMissionReward, updateMissionProgress, updateEncyclopedia, getPlayerMonsters
+  claimMissionReward, updateMissionProgress, updateEncyclopedia, getPlayerMonsters,
+  addExperienceAndLevelUp
 } from '../database.js';
 import { MONSTERS, AREAS, PERSONALITIES, ITEMS, WEATHERS } from '../config.js';
 import { 
@@ -522,43 +523,8 @@ export async function handleButton(interaction) {
     }
 
     // Apply XP & check Level up
-    const currentLvl = monster.level;
-    const currentXP = monster.exp + xpGained;
-    
-    // Level curves: 50 * level ^ 1.4
-    const getXPNeeded = (l) => Math.floor(50 * Math.pow(l, 1.4));
-    let newLvl = currentLvl;
-    let finalXP = currentXP;
-    let leveledUp = false;
-
-    while (true) {
-      const needed = getXPNeeded(newLvl);
-      if (finalXP >= needed) {
-        finalXP -= needed;
-        newLvl += 1;
-        leveledUp = true;
-      } else {
-        break;
-      }
-    }
-
-    let levelUpMsg = '';
-    if (leveledUp) {
-      const newStats = calculateMonsterStats(monster.monster_no, newLvl, monster.personality);
-      db.prepare(`
-        UPDATE monsters SET 
-          level = ?, exp = ?, hp = ?, max_hp = ?,
-          attack = ?, defense = ?, speed = ?, intelligence = ?, charm = ?
-        WHERE id = ?
-      `).run(
-        newLvl, finalXP, newStats.hp, newStats.max_hp,
-        newStats.attack, newStats.defense, newStats.speed, newStats.intelligence, newStats.charm,
-        monsterId
-      );
-      levelUpMsg = `\n🆙 **レベルアップ！** Lv.${currentLvl} ➡️ **Lv.${newLvl}** に上昇！ 各種ステータスが上昇した！`;
-    } else {
-      db.prepare('UPDATE monsters SET exp = ? WHERE id = ?').run(finalXP, monsterId);
-    }
+    const result = addExperienceAndLevelUp(userId, monsterId, xpGained);
+    const levelUpMsg = result ? (result.levelUpMsg + result.evolutionMsg) : '';
 
     // Refresh monster data
     monster = db.prepare('SELECT * FROM monsters WHERE id = ? AND player_id = ?').get(monsterId, userId);
@@ -1737,39 +1703,16 @@ export async function handleButton(interaction) {
       const xpGained = 30 + Math.floor(myMonsterA.level * 2);
       const winningMonster = winner === 'A' ? myMonsterA : myMonsterB;
       
-      const getXPNeeded = (l) => Math.floor(50 * Math.pow(l, 1.4));
-      let newLvl = winningMonster.level;
-      let finalXP = winningMonster.exp + xpGained;
-      let leveledUp = false;
-
-      while (true) {
-        const needed = getXPNeeded(newLvl);
-        if (finalXP >= needed) {
-          finalXP -= needed;
-          newLvl += 1;
-          leveledUp = true;
-        } else {
-          break;
-        }
-      }
-
-      if (leveledUp) {
-        const newStats = calculateMonsterStats(winningMonster.monster_no, newLvl, winningMonster.personality);
-        db.prepare(`
-          UPDATE monsters SET 
-            level = ?, exp = ?, hp = ?, max_hp = ?,
-            attack = ?, defense = ?, speed = ?, intelligence = ?, charm = ?
-          WHERE id = ?
-        `).run(
-          newLvl, finalXP, newStats.hp, newStats.max_hp,
-          newStats.attack, newStats.defense, newStats.speed, newStats.intelligence, newStats.charm,
-          winningMonster.id
-        );
-        rewardMsg = `\n🌟 **${winningMonster.nickname}** は \`${xpGained}\` EXPを獲得！ **Lv.${winningMonster.level} ➡️ Lv.${newLvl}** に上がった！\n` +
+      const result = addExperienceAndLevelUp(winnerUserId, winningMonster.id, xpGained);
+      if (result && result.leveledUp) {
+        rewardMsg = `\n🌟 **${winningMonster.nickname}** は \`${xpGained}\` EXPを獲得！ **Lv.${result.oldLevel} ➡️ Lv.${result.newLevel}** に上がった！${result.evolved ? result.evolutionMsg : ''}\n` +
+                    `🪙 **${winnerUsername}** は勝利報酬として **$100** & **50P** を獲得しました！\n` +
+                    `🪙 敗者にも参加賞として **$20** が贈られます。`;
+      } else if (result && result.evolved) {
+        rewardMsg = `\n🌟 **${winningMonster.nickname}** は \`${xpGained}\` EXPを獲得しました！${result.evolutionMsg}\n` +
                     `🪙 **${winnerUsername}** は勝利報酬として **$100** & **50P** を獲得しました！\n` +
                     `🪙 敗者にも参加賞として **$20** が贈られます。`;
       } else {
-        db.prepare('UPDATE monsters SET exp = ? WHERE id = ?').run(finalXP, winningMonster.id);
         rewardMsg = `\n🌟 **${winningMonster.nickname}** は \`${xpGained}\` EXPを獲得しました！\n` +
                     `🪙 **${winnerUsername}** は勝利報酬として **$100** & **50P** を獲得しました！\n` +
                     `🪙 敗者にも参加賞として **$20** が贈られます。`;
@@ -1814,39 +1757,13 @@ async function executeBattleEnd(interaction, session, winner) {
   if (winner === 'PLAYER') {
     combatLogs.push(`🏆 **味方の勝利！**`);
     
-    // Award XP
     const xpGained = 20 + Math.floor(myMonster.level * 1.5);
-    const getXPNeeded = (l) => Math.floor(50 * Math.pow(l, 1.4));
-    let newLvl = myMonster.level;
-    let finalXP = myMonster.exp + xpGained;
-    let leveledUp = false;
-
-    while (true) {
-      const needed = getXPNeeded(newLvl);
-      if (finalXP >= needed) {
-        finalXP -= needed;
-        newLvl += 1;
-        leveledUp = true;
-      } else {
-        break;
-      }
-    }
-
-    if (leveledUp) {
-      const newStats = calculateMonsterStats(myMonster.monster_no, newLvl, myMonster.personality);
-      db.prepare(`
-        UPDATE monsters SET 
-          level = ?, exp = ?, hp = ?, max_hp = ?,
-          attack = ?, defense = ?, speed = ?, intelligence = ?, charm = ?
-        WHERE id = ?
-      `).run(
-        newLvl, finalXP, newStats.hp, newStats.max_hp,
-        newStats.attack, newStats.defense, newStats.speed, newStats.intelligence, newStats.charm,
-        myMonster.id
-      );
-      xpMsg = `🌟 **${myMonster.nickname}** は \`${xpGained}\` EXPを獲得！ **Lv.${myMonster.level} ➡️ Lv.${newLvl}** に上がった！`;
+    const result = addExperienceAndLevelUp(userId, myMonster.id, xpGained);
+    if (result && result.leveledUp) {
+      xpMsg = `🌟 **${myMonster.nickname}** は \`${xpGained}\` EXPを獲得！ **Lv.${result.oldLevel} ➡️ Lv.${result.newLevel}** に上がった！${result.evolved ? result.evolutionMsg : ''}`;
+    } else if (result && result.evolved) {
+      xpMsg = `🌟 **${myMonster.nickname}** は \`${xpGained}\` EXPを獲得しました！${result.evolutionMsg}`;
     } else {
-      db.prepare('UPDATE monsters SET exp = ? WHERE id = ?').run(finalXP, myMonster.id);
       xpMsg = `🌟 **${myMonster.nickname}** は \`${xpGained}\` EXPを獲得しました！`;
     }
 

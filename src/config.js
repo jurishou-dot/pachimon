@@ -468,3 +468,17 @@ export const MONSTERS = {
     spawnAreas: ['ABANDONED_FACTORY']
   },
 };
+
+export const EVOLUTIONS = {
+  1: { level: 16, targetNo: 22 },  // タマネギマキ -> しげる
+  22: { level: 32, targetNo: 29 }, // しげる -> クマネコ
+
+  2: { level: 15, targetNo: 8 },   // コンセントラ -> じゅんいち
+  8: { level: 30, targetNo: 14 },  // じゅんいち -> のりお
+
+  5: { level: 15, targetNo: 12 },  // ミズモチ -> ひろし
+  12: { level: 30, targetNo: 26 }, // ひろし -> フグサシ
+
+  3: { level: 15, targetNo: 10 },  // たかし -> オワタロウ
+  10: { level: 30, targetNo: 25 }  // オワタロウ -> まさる
+};
