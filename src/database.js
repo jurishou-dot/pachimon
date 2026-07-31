@@ -367,7 +367,7 @@ export function addExperienceAndLevelUp(userId, monsterId, expGained) {
   let newLvl = currentLvl;
   let leveledUp = false;
 
-  while (true) {
+  while (newLvl < 100) {
     const needed = getXPNeededForLevel(newLvl);
     if (finalXP >= needed) {
       finalXP -= needed;
@@ -376,6 +376,11 @@ export function addExperienceAndLevelUp(userId, monsterId, expGained) {
     } else {
       break;
     }
+  }
+
+  if (newLvl >= 100) {
+    newLvl = 100;
+    finalXP = 0;
   }
 
   let monsterNo = monster.monster_no;
@@ -390,7 +395,7 @@ export function addExperienceAndLevelUp(userId, monsterId, expGained) {
       const prevTemplate = MONSTERS[monsterNo];
       const nextTemplate = MONSTERS[evo.targetNo];
       if (nextTemplate) {
-        if (nickname === prevTemplate.name) {
+        if (!nickname || nickname === prevTemplate.name) {
           nickname = nextTemplate.name;
         }
         monsterNo = evo.targetNo;
