@@ -776,8 +776,8 @@ export async function handleButton(interaction) {
     // Trigger mission progress increment
     updateMissionProgress(userId, 'EXPLORE', areaId);
 
-    // Roll encounter chance (70% find a Pachimon)
-    if (Math.random() < 0.70) {
+    // Roll encounter chance (35% find a Pachimon)
+    if (Math.random() < 0.35) {
       // Find a monster!
       const wildMonster = generateRandomWildMonster(areaId, player.rank_points);
       
